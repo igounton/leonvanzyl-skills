@@ -25,16 +25,16 @@ Target: first finished short in 20-30 min of wall time, of which the machine nee
   - the SFX events
 - Everything downstream reads that file. Don't re-derive decisions later.
 
-9.3 PARALLEL SUBAGENTS (up to 6 at once; each one checks its own output before reporting)
-- Graphics: one subagent per composition, or one per 2-3 short compositions. Each gets the shared engine, its run brief, its cue times and its assets. It then:
+9.3 PARALLEL SUBAGENTS (a FEW long-lived ones; each checks its own output before reporting)
+- Graphics: 2-4 long-lived agents, one per 1-2 shorts, grouped by kind (real sources and footage / concept diagrams / one continuous world); never one per composition (Leon prefers few long-lived agents). Each gets the shared brief (`GFX_BRIEF.md` with `brief_runs.py`'s word times), the engine and its assets. It then, for ALL its compositions:
   - lints the composition
   - draft-renders at 10 fps (`render_draft.sh`: draft + contact sheet in one call)
   - checks a contact sheet and fixes what it finds
   - renders at 240 fps with tmix (`render_full.sh`)
-- Render compositions concurrently, but through `render_full.sh` only: it holds a machine-wide budget of RENDER_SLOTS (3) renders x HF_WORKERS (8) Chrome browsers, so six subagents rendering at once queue behind each other instead of launching 100 Chromes (24 workers on one render was already slower than 16). One 8 s composition: ~45 s alone; the full-render stage of a six-composition short stays around 2-3 min.
+- Render compositions concurrently, but through `render_full.sh` only: it holds a machine-wide budget of RENDER_SLOTS (3) renders x HF_WORKERS (8) Chrome browsers, so several agents rendering at once queue behind each other instead of launching 100 Chromes (24 workers on one render was already slower than 16). One 8 s composition: ~45 s alone; the full-render stage of a six-composition short stays around 2-3 min.
 - The 240 fps intermediate is a lossless PNG sequence, not MOV: HyperFrames' MOV/ProRes path forces its slow alpha capture (~15 fps regardless of workers) and its MP4 path captures JPEG and has the 8 px right-edge strip (lessons.md). `PRODUCER_ENABLE_BROWSER_POOL=false` (exported by both render scripts) gives each worker its own browser, which is what makes the workers count: 11 -> 41 fps at 8 workers.
 - Meanwhile, the main agent does everything that doesn't wait on graphics: frame-exact camera extraction, matting, captions, cover, CTA, and the audio synthesis and mix (`prep.sh`, one call).
-- Several shorts from one recording: graphics subagents by tag (2-5 compositions each, `examples/GFX_BRIEF_template.md`), not one per short, so no agent waits on a long queue. Measured, 3 shorts / 16 compositions from a 12.5 min 4K export:
+- Several shorts from one recording: a few graphics agents by tag (`examples/GFX_BRIEF_template.md`). Measured, 5 shorts / 31 compositions from a 16 min 4K export (Harness Engineering): 3 agents, about an hour each in parallel, while `music_takes.py` and `prep.sh` ran; `finish.sh` about 70 s per short. Earlier, 3 shorts / 16 compositions from a 12.5 min 4K export:
   - machine time: analyse 95 s, one `cut.sh` for all three 68 s, one `prep.sh` for all three 39 s (15 camera clips 10 s, 8 mattes 24 s), `finish.sh` 50-80 s per short;
   - the graphics subagents ran 15-30 min each, overlapping the research subagent and each other.
   - Finish a short as soon as its own graphics are `done`; don't wait for the other shorts.

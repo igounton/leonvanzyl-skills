@@ -21,14 +21,23 @@ if CONCAT: ONLY = []
 if '--preview' in sys.argv: PREVIEW = [float(x) for x in sys.argv[sys.argv.index('--preview') + 1].split(',')]
 CLEAN = PREVIEW is not None and '--clean' in sys.argv   # thumbnail candidates: the picture alone
 FPS = 60; Wc, Hc = 1080, 1920
-C = json.load(open('cut.json'))[sk]; S = json.load(open('shorts.json'))[sk]
-CAM = json.load(open(f'{sk}/cam/plan.json'))
+C = json.load(open('cut.json', encoding='utf-8'))[sk]; S = json.load(open('shorts.json', encoding='utf-8'))[sk]
+CAM = json.load(open(f'{sk}/cam/plan.json', encoding='utf-8'))
 END = C['END']; NF = int(round(END * FPS))
 RUNS = C['runs']
 F = 'fonts/'
-POP = ImageFont.truetype(F + 'Poppins-Bold.ttf', 74)
-SER = ImageFont.truetype(F + 'InstrumentSerif-Italic.ttf', 74)
-INK = (17, 17, 17); CLAY = (217, 119, 87); CLAY_T = (178, 87, 48)
+# The channel's design system ("Leon YouTube": graphite stage, glass, Figtree / Geist Mono, azure accent) - the same
+# look as the long-form edits' keyword pops and CTA cards, which Leon approved ("Now that looks cool. Lock it in").
+def vfont(name, size, weight):
+    f = ImageFont.truetype(F + name, int(round(size)))
+    try: f.set_variation_by_axes([weight])
+    except Exception: pass
+    return f
+CAP = vfont('Figtree-VF.ttf', 74, 700)        # captions: Figtree bold, white with a graphite stroke
+INK = (17, 18, 20); STAGE950 = (11, 12, 14); STAGE800 = (24, 25, 28); STAGE700 = (33, 34, 38)
+TEXT_MUTED = (126, 129, 138); AZURE = (47, 149, 255); AZURE_INK = (21, 96, 208)
+ACCENTS = {'azure': (47, 149, 255), 'ember': (255, 138, 91), 'iris': (156, 124, 255), 'mint': (79, 214, 160)}
+GLASS = (24, 25, 28, 224)                     # stage-800, more opaque than the slides' 62% (no backdrop blur here)
 
 def run_at(t):
     for r in RUNS:
@@ -51,10 +60,14 @@ def disp_tokens():
 FUNC = set('a an the to of and or but if in on at for with from by is it its it\'s this that as be are was were you your i i\'m we we\'ll so then than up out like'.split())
 HL = [h.lower().split() for h in S.get('highlights', [])]
 
+J_LEAD = 0.06
+
 def build_chunks():
     toks = disp_tokens(); chunks = []; i = 0; since = 3
     while i < len(toks):
-        r = run_at(toks[i]['s'] + 0.001)
+        # J_LEAD: a line's audio (and its first word) starts 50 ms before its picture cut, so a word belongs to the run it
+        # is heard in 60 ms later; otherwise each line's first word flashes alone as a caption at the end of the run before
+        r = run_at(toks[i]['s'] + J_LEAD)
         # highlight candidate?
         hit = None
         for h in HL:
@@ -66,7 +79,7 @@ def build_chunks():
         while i < len(toks) and len(cur) < 3:
             nt = toks[i]
             if cur[-1]['p']: break
-            if run_at(nt['s'] + 0.001) is not r: break
+            if run_at(nt['s'] + J_LEAD) is not r: break
             if nt['s'] - cur[-1]['e'] > 0.32: break
             if len(' '.join(t['d'] for t in cur + [nt])) > 20: break
             if any([t['d'].lower() for t in toks[i:i + len(h)]] == h for h in HL) and since + 1 >= 2: break
@@ -80,8 +93,10 @@ def build_chunks():
         c['t1'] = min(END, nxt if nxt - last_e < 0.5 else last_e + 0.3)
     return chunks
 
-def caption_img(text, hl):
-    font = SER if hl else POP
+def caption_img(text, hl=False):
+    """a normal caption chunk: Figtree bold, white, a 10 px graphite stroke, wide word gaps (the stroke never swallows
+    the spaces). Highlighted chunks are glass chips instead (chip_parts)."""
+    font = CAP
     pad = 30
     dummy = ImageDraw.Draw(Image.new('L', (1, 1)))
     lines = [text]
@@ -96,18 +111,100 @@ def caption_img(text, hl):
     w = int(max(lw(l) for l in lines)) + 2 * pad; h = lh * len(lines) + 2 * pad
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     for j, l in enumerate(lines):
-        x = (w - lw(l)) / 2; y = pad + j * lh + (8 if hl else 0)
+        x = (w - lw(l)) / 2; y = pad + j * lh
         for wd in l.split():
-            if hl:
-                d.text((x, y), wd, font=font, fill=(255, 255, 0, 255), stroke_width=12, stroke_fill=(0, 0, 0, 255))
-                d.text((x, y), wd, font=font, fill=(255, 255, 0, 255), stroke_width=2, stroke_fill=(255, 255, 0, 255))
-            else:
-                d.text((x, y), wd, font=font, fill=(255, 255, 255, 255), stroke_width=10, stroke_fill=(0, 0, 0, 255))
+            d.text((x, y), wd, font=font, fill=(255, 255, 255, 255), stroke_width=10, stroke_fill=STAGE950 + (255,))
             x += dummy.textlength(wd, font=font) + gap
     return np.asarray(im)
 
+
+# ---------------------------------------------------------------- highlight chips (the long-form keyword pop, locked)
+# A graphite glass chip (stage-800, accent hairline + bloom, top highlight, the long panel shadow), the words in Figtree
+# 600 white at the title tracking, and the accent line drawn in beneath them. It pops in (0.18 s) and the line sweeps
+# in from 0.08 s over 0.32 s; it cuts with the caption.
+CHIP_SIZE, CHIP_TRACK, CHIP_PADX, CHIP_PADY, CHIP_SHPAD, CHIP_R = 70, -0.025, 40, 26, 150, 28
+CHIP_IN, SWEEP_T0, SWEEP_DUR = 0.18, 0.08, 0.32
+
+
+def tracked(draw, xy, text, f, fill, track_em):
+    """text with letter-spacing, keeping the font's kerning"""
+    x, y = xy; extra = track_em * f.size; prev = 0.0
+    for i, ch in enumerate(text):
+        draw.text((x + prev + i * extra, y), ch, font=f, fill=fill)
+        prev = f.getlength(text[:i + 1])
+    return prev + extra * (len(text) - 1)
+
+
+def chip_parts(text, accent='azure'):
+    acc = ACCENTS.get(accent, ACCENTS['azure'])
+    size = CHIP_SIZE
+    while True:                                                   # long phrases shrink to fit the 1080 frame
+        f = vfont('Figtree-VF.ttf', size, 600)
+        tw = f.getlength(text) + CHIP_TRACK * f.size * (len(text) - 1)
+        if tw + 2 * CHIP_PADX <= 980 or size <= 50: break
+        size -= 2
+    cap = f.getbbox('H')[3] - f.getbbox('H')[1]
+    dsc = f.getbbox('gjpqy')[3] - f.getbbox('H')[3]               # descender depth: the line sits below it
+    line_gap, line_h = dsc + 14, 5
+    cw, ch = tw + 2 * CHIP_PADX, CHIP_PADY + cap + line_gap + line_h + CHIP_PADY
+    sp = CHIP_SHPAD; size_px = (int(cw + 2 * sp), int(ch + 2 * sp)); box = (sp, sp, sp + cw, sp + ch); r = CHIP_R
+    base = Image.new('RGBA', size_px, (0, 0, 0, 0))
+
+    def soft(rect, rgba, blur):
+        m = Image.new('L', size_px, 0); ImageDraw.Draw(m).rounded_rectangle(rect, r, fill=255)
+        m = m.filter(ImageFilter.GaussianBlur(blur))
+        lay = Image.new('RGBA', size_px, rgba[:3] + (0,)); lay.putalpha(m.point(lambda v: int(v * rgba[3] / 255)))
+        return lay
+    x0, y0, x1, y1 = box
+    base = Image.alpha_composite(base, soft((x0 + 40, y0 + 90, x1 - 40, y1 + 50), (0, 0, 0, 200), 50))   # 0 50 120 -40 shadow
+    base = Image.alpha_composite(base, soft((x0 + 30, y0 + 30, x1 - 30, y1 - 30), acc + (150,), 46))    # accent bloom
+    d = ImageDraw.Draw(base)
+    d.rounded_rectangle(box, r, fill=GLASS)
+    d.rounded_rectangle(box, r, outline=acc + (84,), width=2)                                          # accent hairline
+    d.line((x0 + r, y0 + 1.5, x1 - r, y0 + 1.5), fill=(255, 255, 255, 22), width=1)                   # top highlight
+    ty = y0 + CHIP_PADY
+    tracked(d, (x0 + CHIP_PADX, ty - f.getbbox('H')[1]), text, f, (255, 255, 255, 255), CHIP_TRACK)
+    ly = ty + cap + line_gap
+    return base, (x0 + CHIP_PADX, ly, x0 + CHIP_PADX + tw, ly + line_h), acc
+
+
+CHIP_CACHE = {}
+def chip_render(k, parts, t_rel):
+    """(RGBA PIL image, scale, alpha, y offset) of chip k at t_rel s after its caption starts; frames with the same
+    state reuse the same image"""
+    pin = min(1.0, max(0.0, t_rel / CHIP_IN))
+    sw = min(1.0, max(0.0, (t_rel - SWEEP_T0) / SWEEP_DUR))
+    sw = 1 - (1 - sw) ** 3                                        # power3.out
+    key = (k, round(pin, 3), round(sw, 3))
+    if key not in CHIP_CACHE:
+        base, line, acc = parts; im = base
+        if sw > 0:                                                # the accent line, with a soft glow, drawn left to right
+            x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw
+            glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((x0, y0, xe, y1), 3, fill=255)
+            glow = glow.filter(ImageFilter.GaussianBlur(7))
+            gl = Image.new('RGBA', im.size, acc + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.8)))
+            im = Image.alpha_composite(im, gl)
+            ImageDraw.Draw(im).rounded_rectangle((x0, y0, xe, y1), 3, fill=acc + (255,))
+        e = 1 - (1 - pin) ** 3
+        CHIP_CACHE[key] = (im, 0.96 + 0.04 * e, min(1.0, pin * 1.6), 12 * (1 - e))
+    return CHIP_CACHE[key]
+
+
+def paste_rgba(dst, im, cx, cy, scale=1.0, alpha=1.0):
+    """alpha-over a PIL RGBA image onto the float RGB frame, centred on (cx, cy)"""
+    if scale != 1.0:
+        im = im.resize((max(1, int(im.size[0] * scale)), max(1, int(im.size[1] * scale))), Image.LANCZOS)
+    a = np.asarray(im, np.float32); h, w = a.shape[:2]
+    x0, y0 = int(round(cx - w / 2)), int(round(cy - h / 2))
+    ys0, ys1 = max(0, y0), min(Hc, y0 + h); xs0, xs1 = max(0, x0), min(Wc, x0 + w)
+    if ys1 <= ys0 or xs1 <= xs0: return
+    src = a[ys0 - y0:ys1 - y0, xs0 - x0:xs1 - x0]; al = src[..., 3:4] / 255.0 * alpha
+    sub = dst[ys0:ys1, xs0:xs1]; sub[:] = sub * (1 - al) + src[..., :3] * al
+
 def caption_center_y(r):
-    if r['i'] == RUNS[-1]['i']: return (1037 + 1306) / 2          # outro (CTA) : centre band
+    # outro (CTA): just above the CTA card (top 1344). A webcam face cover-fitted to 1080 wide fills the frame down to
+    # ~y 1150, so the old centre band (1037-1306) sat on the chin; centred at 1250 a 1-2 line caption clears both
+    if r['i'] == RUNS[-1]['i']: return 1250
     return (941 + 1114) / 2 if r['layout'] == 'split' else (1290 + 1560) / 2
 
 # ---------------------------------------------------------------- shapes
@@ -166,14 +263,18 @@ def pip_fullcam(fr):
     return unsharp(big[:, x0:x0 + Wc])
 
 SIDE_W = None
-def split_frame(bg, fr, al, yf):
+def matte_kind(i):
+    try: return json.load(open(f'{sk}/cam/r{i}_matte.json', encoding='utf-8')).get('model', 'u2net')
+    except (OSError, ValueError): return 'u2net'
+
+def split_frame(bg, fr, al, yf, rvm=False):
     global SIDE_W
     fw = int(round(fr.shape[1] * SCALE_SPLIT)); fh = int(round(fr.shape[0] * SCALE_SPLIT))
     xf = int(round(540 - fw / 2))
     big = unsharp(cv2.resize(fr, (fw, fh), interpolation=cv2.INTER_LANCZOS4)).astype(np.float32)
     A = cv2.resize(al, (fw, fh), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
-    A = cv2.erode(A, np.ones((3, 3), np.uint8), iterations=1)
-    A = cv2.GaussianBlur(A, (0, 0), 1.2)
+    if not rvm: A = cv2.erode(A, np.ones((3, 3), np.uint8), iterations=1)   # u2net's dark rim
+    A = cv2.GaussianBlur(A, (0, 0), 0.6 if rvm else 1.2)
     # soft fill for the card strips the portrait webcam can't reach: same frame, enlarged + blurred, about the same centre
     s2 = Wc * 1.12 / fr.shape[1]; fw2, fh2 = int(round(fr.shape[1] * s2)), int(round(fr.shape[0] * s2))
     blur = cv2.GaussianBlur(cv2.resize(fr, (fw2 // 4, fh2 // 4), interpolation=cv2.INTER_AREA), (0, 0), 6)
@@ -228,7 +329,7 @@ def split_geometry():
     src = {str(ri): [(f, os.path.getsize(f), int(os.path.getmtime(f) * 1000)) if os.path.exists(f) else (f, None, None)
                      for f in (CAM[str(ri)]['file'], f'{sk}/cam/r{ri}_matte.mov')] for ri in runs}
     if os.path.exists(gf):
-        g = json.load(open(gf))
+        g = json.load(open(gf, encoding='utf-8'))
         if g.get('runs') == runs and g.get('src') == json.loads(json.dumps(src)): return g
     g = dict(runs=runs, src=src, per_run={})
     kinds = {CAM[str(ri)].get('kind', 'pip') for ri in runs}
@@ -266,48 +367,136 @@ def cta_render(t_rel, spec):
     blink = (int((t_rel - spec['type0']) * 2.2) % 2 == 0) if t_rel > spec['type0'] + len(spec['kw']) / spec['cps'] else True
     pp = (t_rel - spec['press']) / 0.24
     sc = 1 - 0.08 * np.sin(np.pi * pp) if 0 <= pp <= 1 else 1
-    col = CLAY_T if 0 <= pp <= 1 else CLAY
+    col = AZURE_INK if 0 <= pp <= 1 else AZURE
     key = (land, n, posted, blink, float(sc), col)
-    if key not in CTA_CACHE: CTA_CACHE[key] = _cta_draw(land, n, posted, blink, sc, col, spec)
+    draw = _cta_draw_full if spec.get('mode') == 'full_video' else _cta_draw
+    if key not in CTA_CACHE: CTA_CACHE[key] = draw(land, n, posted, blink, sc, col, spec)
     return CTA_CACHE[key]
 
-def _cta_draw(land, n, posted, blink, sc, col, spec):
+
+def _glass_card(bw, bh, ss, pad):
+    """the CTA card's graphite glass: stage-800, white hairline + top highlight, the long panel shadow"""
+    im = Image.new('RGBA', (bw * ss + 2 * pad, bh * ss + 2 * pad), (0, 0, 0, 0))
+    ox, oy = pad, pad; R = 44 * ss
+    m = Image.new('L', im.size, 0)
+    ImageDraw.Draw(m).rounded_rectangle((ox + 40 * ss, oy + 90 * ss, ox + bw * ss - 40 * ss, oy + bh * ss + 50 * ss), R, fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(50 * ss)); im.putalpha(m.point(lambda v: int(v * 0.8)))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, fill=STAGE800 + (246,))
+    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, outline=(255, 255, 255, 34), width=3)
+    d.line((ox + R, oy + 3, ox + bw * ss - R, oy + 3), fill=(255, 255, 255, 26), width=2)
+    return im, ox, oy
+
+
+def _play_tile(size):
+    """the design system's glossy azure icon tile with a white play glyph (RGBA, size x size)"""
+    t = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    g = np.linspace(0, 1, size, dtype=np.float32)[:, None, None]
+    top, mid, bot = np.array([143, 203, 255], np.float32), np.array([59, 152, 255], np.float32), np.array([27, 99, 230], np.float32)
+    col = np.where(g < 0.45, top + (mid - top) * (g / 0.45), mid + (bot - mid) * ((g - 0.45) / 0.55))
+    grad = Image.fromarray(np.repeat(col, size, 1).clip(0, 255).astype(np.uint8), 'RGB').convert('RGBA')
+    mk = Image.new('L', (size, size), 0); ImageDraw.Draw(mk).rounded_rectangle((0, 0, size - 1, size - 1), int(size * 0.285), fill=255)
+    t.paste(grad, (0, 0), mk)
+    hl = Image.new('L', (size, size), 0)
+    ImageDraw.Draw(hl).ellipse((size * 0.1, size * 0.04, size * 0.9, size * 0.52), fill=95)
+    hl = hl.filter(ImageFilter.GaussianBlur(size * 0.04))
+    hl = Image.fromarray(np.minimum(np.asarray(hl), np.asarray(mk)))
+    white = Image.new('RGBA', (size, size), (255, 255, 255, 0)); white.putalpha(hl)
+    t = Image.alpha_composite(t, white)
+    c, r = size / 2, size * 0.2
+    ImageDraw.Draw(t).polygon([(c - r * 0.75, c - r), (c - r * 0.75, c + r), (c + r * 1.05, c)], fill=(255, 255, 255, 255))
+    return t
+
+
+def _cta_draw_full(land, n, posted, blink, sc, col, spec):
+    """the outro card every short ends on (Leon's rule, 2026-10-14): 'Watch the full video', pointing down at the
+    full-video link under the short. Graphite glass card, his glossy azure play tile, the line typed in white Figtree 600
+    with an azure caret, and an azure arrow button with a soft glow that presses (azure-ink) once the line is typed."""
     x0, y0, bw, bh = CTA_BOX
     e = 1 - (1 - land) ** 3
-    ss = 2
-    im = Image.new('RGBA', (bw * ss + 400, bh * ss + 400), (0, 0, 0, 0))
-    ox, oy = 200, 200
-    # shadow (three layers)
-    sh = Image.new('L', im.size, 0); ds = ImageDraw.Draw(sh)
-    shadow = Image.new('RGBA', im.size, (24, 24, 32, 0))
-    acc = np.zeros(im.size[::-1], np.float32)
-    for dy, blur, a in [(60, 120, .16), (24, 48, .10), (4, 10, .06)]:
-        m = Image.new('L', im.size, 0); ImageDraw.Draw(m).rounded_rectangle((ox, oy + dy * ss, ox + bw * ss, oy + bh * ss + dy * ss), 44 * ss, fill=255)
-        m = m.filter(ImageFilter.GaussianBlur(blur / 2 * ss)); acc = 1 - (1 - acc) * (1 - a * np.asarray(m, np.float32) / 255)
-    shadow.putalpha(Image.fromarray((acc * 255).astype(np.uint8)))
-    im.alpha_composite(shadow)
+    ss = 2; pad = 200
+    im, ox, oy = _glass_card(bw, bh, ss, pad)
+    cy = oy + bh * ss / 2
+    ts = 116 * ss; tx0 = ox + 40 * ss
+    tile = _play_tile(ts)
+    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((tx0, cy - ts / 2 + 26 * ss, tx0 + ts, cy + ts / 2 + 26 * ss), int(ts * 0.285), fill=255)
+    glow = glow.filter(ImageFilter.GaussianBlur(22 * ss))
+    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.5)))
+    im = Image.alpha_composite(im, gl); im.alpha_composite(tile, (int(tx0), int(cy - ts / 2)))
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), 44 * ss, fill=(255, 255, 255, 255))
+    txt = spec['kw'][:n]
+    ft = vfont('Figtree-VF.ttf', 56 * ss, 600)
+    tx = tx0 + ts + 32 * ss; tw = d.textlength(txt, font=ft)
+    d.text((tx, cy), txt, font=ft, fill=(255, 255, 255, 255), anchor='lm')
+    if not posted and blink:
+        d.rounded_rectangle((tx + tw + 6 * ss, cy - 32 * ss, tx + tw + 12 * ss, cy + 32 * ss), 3 * ss, fill=AZURE + (255,))
+    # the arrow button: points down at the full-video link under the short
+    br = 56 * ss * sc; bxc = ox + bw * ss - 40 * ss - 56 * ss
+    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).ellipse((bxc - br, cy - br, bxc + br, cy + br), fill=255)
+    glow = glow.filter(ImageFilter.GaussianBlur(16 * ss))
+    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.55)))
+    im = Image.alpha_composite(im, gl); d = ImageDraw.Draw(im)
+    d.ellipse((bxc - br, cy - br, bxc + br, cy + br), fill=col + (255,))
+    a = 22 * ss * sc; w = max(2, int(7 * ss * sc))
+    d.line((bxc, cy - a, bxc, cy + a), fill=(255, 255, 255, 255), width=w)
+    d.line((bxc - a * 0.75, cy + a * 0.2, bxc, cy + a), fill=(255, 255, 255, 255), width=w, joint='curve')
+    d.line((bxc + a * 0.75, cy + a * 0.2, bxc, cy + a), fill=(255, 255, 255, 255), width=w, joint='curve')
+    for px in (bxc, bxc - a * 0.75, bxc + a * 0.75):                      # round caps
+        py = cy + a if px == bxc else cy + a * 0.2
+        d.ellipse((px - w / 2, py - w / 2, px + w / 2, py + w / 2), fill=(255, 255, 255, 255))
+    d.ellipse((bxc - w / 2, cy - a - w / 2, bxc + w / 2, cy - a + w / 2), fill=(255, 255, 255, 255))
+    im = im.resize((im.size[0] // ss, im.size[1] // ss), Image.LANCZOS)
+    scl = 0.94 + 0.06 * e; W0, H0 = im.size
+    im = im.resize((max(1, int(W0 * scl)), max(1, int(H0 * scl))), Image.LANCZOS)
+    arr = np.asarray(im).astype(np.float32); arr[..., 3] *= min(1, land * 2.2)
+    canvas = np.zeros((Hc, Wc, 4), np.float32)
+    px = int(round(x0 + bw / 2 - im.size[0] / 2)); py = int(round(y0 + bh / 2 - im.size[1] / 2 + 40 * (1 - e)))
+    ys0, ys1 = max(0, py), min(Hc, py + im.size[1]); xs0, xs1 = max(0, px), min(Wc, px + im.size[0])
+    canvas[ys0:ys1, xs0:xs1] = arr[ys0 - py:ys1 - py, xs0 - px:xs1 - px]
+    return canvas
+
+def _cta_draw(land, n, posted, blink, sc, col, spec):
+    """the comment box in the channel's design system: graphite glass (stage-800), white hairline + top highlight, the
+    long panel shadow, a stage-700 avatar, the keyword in Figtree 600 white with an azure caret, an azure Post button
+    with a soft glow that darkens to azure-ink on the press"""
+    x0, y0, bw, bh = CTA_BOX
+    e = 1 - (1 - land) ** 3
+    ss = 2; pad = 200
+    im = Image.new('RGBA', (bw * ss + 2 * pad, bh * ss + 2 * pad), (0, 0, 0, 0))
+    ox, oy = pad, pad; R = 44 * ss
+    m = Image.new('L', im.size, 0)
+    ImageDraw.Draw(m).rounded_rectangle((ox + 40 * ss, oy + 90 * ss, ox + bw * ss - 40 * ss, oy + bh * ss + 50 * ss), R, fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(50 * ss)); im.putalpha(m.point(lambda v: int(v * 0.8)))      # 0 50 120 -40 shadow
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, fill=STAGE800 + (246,))
+    d.rounded_rectangle((ox, oy, ox + bw * ss, oy + bh * ss), R, outline=(255, 255, 255, 34), width=3)
+    d.line((ox + R, oy + 3, ox + bw * ss - R, oy + 3), fill=(255, 255, 255, 26), width=2)
     # default avatar
     cx, cy, rr = ox + 40 * ss + 58 * ss, oy + bh * ss / 2, 58 * ss
-    d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=(232, 232, 228, 255))
-    d.ellipse((cx - 22 * ss, cy - 36 * ss, cx + 22 * ss, cy + 8 * ss), fill=(178, 178, 172, 255))
-    d.pieslice((cx - 42 * ss, cy + 12 * ss, cx + 42 * ss, cy + 92 * ss), 180, 360, fill=(178, 178, 172, 255))
-    # input field
+    d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=STAGE700 + (255,))
+    d.ellipse((cx - 22 * ss, cy - 36 * ss, cx + 22 * ss, cy + 8 * ss), fill=TEXT_MUTED + (255,))
+    d.pieslice((cx - 42 * ss, cy + 12 * ss, cx + 42 * ss, cy + 92 * ss), 180, 360, fill=TEXT_MUTED + (255,))
+    d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), outline=(66, 67, 71, 255), width=3)
+    # input field: a lighter glass well. PIL replaces pixels instead of blending, so the 6% white lift over stage-800 is
+    # mixed here (a translucent fill would punch a see-through hole in the card)
     fx0, fx1 = cx + rr + 26 * ss, ox + bw * ss - 250 * ss
     fy0, fy1 = cy - 58 * ss, cy + 58 * ss
-    d.rounded_rectangle((fx0, fy0, fx1, fy1), 58 * ss, fill=(244, 244, 241, 255))
+    d.rounded_rectangle((fx0, fy0, fx1, fy1), 58 * ss, fill=(38, 39, 42, 248), outline=(58, 59, 63, 248), width=2)
     txt = spec['kw'][:n]
-    ft = ImageFont.truetype(F + 'Poppins-Bold.ttf', 52 * ss)
+    ft = vfont('Figtree-VF.ttf', 52 * ss, 600)
     tx = fx0 + 36 * ss; tw = d.textlength(txt, font=ft)
-    d.text((tx, cy), txt, font=ft, fill=INK + (255,), anchor='lm')
+    d.text((tx, cy), txt, font=ft, fill=(255, 255, 255, 255), anchor='lm')
     if not posted and blink:
-        d.rounded_rectangle((tx + tw + 6 * ss, cy - 32 * ss, tx + tw + 12 * ss, cy + 32 * ss), 3 * ss, fill=CLAY + (255,))
-    # Post button (press = quick squash + darker clay)
+        d.rounded_rectangle((tx + tw + 6 * ss, cy - 32 * ss, tx + tw + 12 * ss, cy + 32 * ss), 3 * ss, fill=AZURE + (255,))
+    # Post button (press = quick squash + azure-ink), with the accent glow
     bxc, byc = ox + bw * ss - 40 * ss - 95 * ss, cy
     hw, hh = 95 * ss * sc, 50 * ss * sc
+    glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), hh, fill=255)
+    glow = glow.filter(ImageFilter.GaussianBlur(16 * ss))
+    gl = Image.new('RGBA', im.size, AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.55)))
+    im = Image.alpha_composite(im, gl); d = ImageDraw.Draw(im)
     d.rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), hh, fill=col + (255,))
-    fb = ImageFont.truetype(F + 'Poppins-SemiBold.ttf', int(40 * ss * sc))
+    fb = vfont('Figtree-VF.ttf', 40 * ss * sc, 600)
     d.text((bxc, byc), 'Post', font=fb, fill=(255, 255, 255, 255), anchor='mm')
     im = im.resize((im.size[0] // ss, im.size[1] // ss), Image.LANCZOS)
     # landing: scale .94->1, y +40->0, opacity
@@ -322,21 +511,43 @@ def _cta_draw(land, n, posted, blink, sc, col, spec):
 
 # ---------------------------------------------------------------- cover (frame 0 only)
 def cover_rgba(title_lines):
-    ft = ImageFont.truetype(F + 'Poppins-Bold.ttf', 110)
-    d0 = ImageDraw.Draw(Image.new('L', (1, 1)))
-    tw = max(d0.textlength(l, font=ft) for l in title_lines)
-    bw = int(tw + 100); by0, by1 = 262, 603; bx0 = (Wc - bw) // 2
+    """frame 0's title in the design system: white Figtree 600 at the headline tracking on a graphite glass card (accent
+    hairline + bloom, the long panel shadow) with the azure accent line drawn beneath the words - the keyword-pop chip at
+    title size. Centred at y ~432 (the spec's 262-603 band for two lines); the graphic keeps everything below 620."""
+    acc = ACCENTS['azure']; track = -0.03; size = 104
+    while True:
+        ft = vfont('Figtree-VF.ttf', size, 600)
+        tws = [ft.getlength(l) + track * ft.size * (len(l) - 1) for l in title_lines]
+        if max(tws) <= 900 or size <= 72: break
+        size -= 4
+    cap = ft.getbbox('H')[3] - ft.getbbox('H')[1]; dsc = ft.getbbox('gjpqy')[3] - ft.getbbox('H')[3]
+    lh = int(size * 1.08); padx, pady = 56, 44
+    text_h = lh * (len(title_lines) - 1) + cap
+    line_gap, line_h = dsc + 18, 6
+    bw = int(max(tws) + 2 * padx); bh = int(pady + text_h + line_gap + line_h + pady)
+    cyc = 432; bx0, by0 = (Wc - bw) // 2, int(cyc - bh / 2); bx1, by1 = bx0 + bw, by0 + bh; r = 36
     im = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0))
-    acc = np.zeros((Hc, Wc), np.float32)
-    for dy, blur, a in [(40, 80, .14), (14, 28, .10), (3, 8, .06)]:
-        m = Image.new('L', (Wc, Hc), 0); ImageDraw.Draw(m).rounded_rectangle((bx0, by0 + dy, bx0 + bw, by1 + dy), int(0.028 * bw), fill=255)
-        m = m.filter(ImageFilter.GaussianBlur(blur / 2)); acc = 1 - (1 - acc) * (1 - a * np.asarray(m, np.float32) / 255)
-    sh = Image.new('RGBA', (Wc, Hc), (24, 24, 32, 0)); sh.putalpha(Image.fromarray((acc * 255).astype(np.uint8))); im.alpha_composite(sh)
+
+    def soft(rect, rgba, blur):
+        m = Image.new('L', (Wc, Hc), 0); ImageDraw.Draw(m).rounded_rectangle(rect, r, fill=255)
+        m = m.filter(ImageFilter.GaussianBlur(blur))
+        lay = Image.new('RGBA', (Wc, Hc), rgba[:3] + (0,)); lay.putalpha(m.point(lambda v: int(v * rgba[3] / 255)))
+        return lay
+    im = Image.alpha_composite(im, soft((bx0 + 40, by0 + 90, bx1 - 40, by1 + 50), (0, 0, 0, 210), 50))
+    im = Image.alpha_composite(im, soft((bx0 + 30, by0 + 30, bx1 - 30, by1 - 30), acc + (140,), 50))
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle((bx0, by0, bx0 + bw, by1), int(0.028 * bw), fill=(255, 255, 255, 255))
-    lh = (by1 - by0) / len(title_lines)
-    for j, l in enumerate(title_lines):
-        d.text((Wc / 2, by0 + lh * (j + 0.5)), l, font=ft, fill=(0, 0, 0, 255), anchor='mm')
+    d.rounded_rectangle((bx0, by0, bx1, by1), r, fill=STAGE800 + (240,))
+    d.rounded_rectangle((bx0, by0, bx1, by1), r, outline=acc + (84,), width=2)
+    d.line((bx0 + r, by0 + 1.5, bx1 - r, by0 + 1.5), fill=(255, 255, 255, 24), width=1)
+    ty = by0 + pady
+    for j, (l, tw) in enumerate(zip(title_lines, tws)):
+        tracked(d, ((Wc - tw) / 2, ty + j * lh - ft.getbbox('H')[1]), l, ft, (255, 255, 255, 255), track)
+    ly = ty + text_h + line_gap; lw = max(tws); lx0 = (Wc - lw) / 2
+    glow = Image.new('L', (Wc, Hc), 0); ImageDraw.Draw(glow).rounded_rectangle((lx0, ly, lx0 + lw, ly + line_h), 3, fill=255)
+    glow = glow.filter(ImageFilter.GaussianBlur(8))
+    gl = Image.new('RGBA', (Wc, Hc), acc + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.8)))
+    im = Image.alpha_composite(im, gl)
+    ImageDraw.Draw(im).rounded_rectangle((lx0, ly, lx0 + lw, ly + line_h), 3, fill=acc + (255,))
     return np.asarray(im).astype(np.float32)
 
 _BBOX = {}
@@ -356,20 +567,28 @@ def over(dst, rgba, y=None):
 
 # ---------------------------------------------------------------- main loop
 chunks = build_chunks()
-cap_imgs = [caption_img(c['text'], c['hl']) for c in chunks]
+cap_imgs = [chip_parts(c['text'], S.get('accent', 'azure')) if c['hl'] else caption_img(c['text']) for c in chunks]
 json.dump([dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 3), t1=round(c['t1'], 3)) for c in chunks], open(f'{sk}/captions.json', 'w'), indent=1)
 
-cta_line = [L for L in S['lines'] if L.get('cta')][0]
 last = RUNS[-1]
-kw = S['cta_keyword']
-tw = [w for w in C['words'] if w['line'] == cta_line['id'] and w['w'].lower().strip('.,') == kw.lower()]
-t_kw = (tw[0]['s'] if tw else last['T0'] + 0.8) - last['T0']
-spec = dict(kw=kw, land=0.12, type0=max(0.55, t_kw), cps=10.0)
-# the Post press must finish on screen: when the keyword is the outro's last word, start typing earlier
-spec['type0'] = max(0.55, min(spec['type0'], last['T1'] - last['T0'] - 0.3 - 0.55 - len(kw) / spec['cps']))
-spec['press'] = spec['type0'] + len(kw) / spec['cps'] + 0.55
+if S.get('cta_mode', 'full_video') == 'full_video':
+    # Leon's rule (2026-10-14): every short ends by sending viewers to the full video - the card reads "Watch the full
+    # video" and its arrow points down at the full-video link (YouTube's related video; "link in bio" on TikTok / IG)
+    kw = S.get('cta_text', 'Watch the full video')
+    spec = dict(kw=kw, land=0.12, type0=0.45, cps=16.0, mode='full_video')
+    spec['type0'] = max(0.3, min(spec['type0'], last['T1'] - last['T0'] - 0.3 - 0.45 - len(kw) / spec['cps']))
+    spec['press'] = spec['type0'] + len(kw) / spec['cps'] + 0.45
+else:                                              # "cta_mode": "comment": the comment box typing the CTA keyword
+    cta_line = [L for L in S['lines'] if L.get('cta')][0]
+    kw = S['cta_keyword']
+    tw = [w for w in C['words'] if w['line'] == cta_line['id'] and w['w'].lower().strip('.,') == kw.lower()]
+    t_kw = (tw[0]['s'] if tw else last['T0'] + 0.8) - last['T0']
+    spec = dict(kw=kw, land=0.12, type0=max(0.55, t_kw), cps=10.0)
+    # the Post press must finish on screen: when the keyword is the outro's last word, start typing earlier
+    spec['type0'] = max(0.55, min(spec['type0'], last['T1'] - last['T0'] - 0.3 - 0.55 - len(kw) / spec['cps']))
+    spec['press'] = spec['type0'] + len(kw) / spec['cps'] + 0.55
 extra = [dict(t=last['T0'] + spec['land'], type='pop')]
-extra += [dict(t=last['T0'] + spec['type0'] + k / spec['cps'], type='key') for k in range(len(kw))]
+extra += [dict(t=last['T0'] + spec['type0'] + k / spec['cps'], type='key') for k in range(len(kw)) if kw[k] != ' ']
 extra += [dict(t=last['T0'] + spec['press'], type='click')]
 json.dump(extra, open(f'{sk}/events_extra.json', 'w'), indent=1)
 if '--events-only' in sys.argv:
@@ -405,7 +624,7 @@ def frames():
                 else:
                     bg = next(reader(gfx, start=k, count=1)); fr = next(reader(cam['file'], 'rgb24', 3, start=k, count=1))
                     ma = next(reader(f'{sk}/cam/r{r["i"]}_matte.mov', 'rgba', 4, tuple(cam.get('size', [680, 924])), start=k, count=1))
-                    yield n, r, split_frame(bg, fr, ma[..., 3], yf[r['i']])
+                    yield n, r, split_frame(bg, fr, ma[..., 3], yf[r['i']], matte_kind(r['i']) == 'rvm')
             continue
         if r['layout'] == 'fv':
             g = reader(f'gfx/out60/{sk}_r{r["i"]}.mp4')
@@ -420,9 +639,10 @@ def frames():
         else:
             g = reader(f'gfx/out60/{sk}_r{r["i"]}.mp4'); c = reader(CAM[str(r['i'])]['file'], 'rgb24', 3)
             m = reader(f'{sk}/cam/r{r["i"]}_matte.mov', 'rgba', 4, tuple(CAM[str(r['i'])].get('size', [680, 924])))
+            rvm = matte_kind(r['i']) == 'rvm'
             for n in range(n0, n1):
                 bg, fr, ma = next(g), next(c), next(m)
-                yield n, r, (split_frame(bg, fr, ma[..., 3], yf[r['i']]) if need(n) else None)
+                yield n, r, (split_frame(bg, fr, ma[..., 3], yf[r['i']], rvm) if need(n) else None)
 
 want = None if PREVIEW is None else {int(round(t * FPS)) for t in PREVIEW}
 VENC = ['-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-profile:v', 'high',
@@ -447,7 +667,7 @@ def seg_inputs(r):
     if r['layout'] == 'split': files += [f'{sk}/cam/r{i}_matte.mov', f'{sk}/cam/split_geom.json']
     fst = [(f, os.path.getsize(f), int(os.path.getmtime(f) * 1000)) if os.path.exists(f) else (f, None, None) for f in files]
     caps = [dict(text=c['text'], hl=c['hl'], t0=round(c['t0'], 4), t1=round(c['t1'], 4)) for c in chunks if c['t1'] > r['T0'] and c['t0'] < r['T1']]
-    key = dict(run=r, files=fst, caps=caps, cam=CAM[str(i)] if str(i) in CAM else None, scale=SCALE_SPLIT, yf=yf.get(i),
+    key = dict(run=r, files=fst, caps=caps, matte=matte_kind(i) if r['layout'] == 'split' else None, cam=CAM[str(i)] if str(i) in CAM else None, scale=SCALE_SPLIT, yf=yf.get(i),
                cta=spec if r is last else None, cover=title if i == 0 else None, code=CODE_HASH, venc=VENC)
     return json.dumps(key, sort_keys=True, default=str), [f for f, s, m in fst if s is None]
 
@@ -506,9 +726,14 @@ for n, r, img in frames():
     t = n / FPS
     # captions (never on frame 0)
     if n > 0 and not CLEAN:
-        for c, ci in zip(chunks, cap_imgs):
+        for k, (c, ci) in enumerate(zip(chunks, cap_imgs)):
             if c['t0'] <= t + 1e-6 < c['t1']:
-                cy = caption_center_y(r); h, w = ci.shape[:2]
+                cy = caption_center_y(r)
+                if c['hl']:                                   # the glass chip pops in and draws its accent line
+                    im_, scl, al, dy = chip_render(k, ci, t - c['t0'])
+                    paste_rgba(img, im_, Wc / 2, cy + dy, scl, al)
+                    break
+                h, w = ci.shape[:2]
                 x0, y0 = (Wc - w) // 2, int(round(cy - h / 2))
                 sub = img[y0:y0 + h, x0:x0 + w]; a = ci[..., 3:4] / 255.0
                 sub[:] = sub * (1 - a) + ci[..., :3] * a

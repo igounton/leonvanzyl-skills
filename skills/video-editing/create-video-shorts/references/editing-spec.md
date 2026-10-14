@@ -2,7 +2,7 @@
 
 This is the complete creative and technical spec behind the shorts. Every rule here was proven on real output: follow all of it, don't simplify or skip any rule to save time (speed comes from parallelism, see speed.md, never from cutting corners). Where the user's request says something different, the user wins.
 
-You're editing my raw talking-head recording into a finished, ready-to-post 9:16 short (Instagram Reel, TikTok, YouTube Short). Do all of it yourself, end to end, in code: ffmpeg, Python, Node and HyperFrames (npx --yes hyperframes). No video editor app. Every sound effect and the music are synthesized by you in code; there are no audio files to use. You may install what you need locally inside this project (npm packages in the project folder, pip into a local venv), without asking. Never install system-wide software.
+You're editing my raw talking-head recording into a finished, ready-to-post 9:16 short (Instagram Reel, TikTok, YouTube Short). Do all of it yourself, end to end, in code: ffmpeg, Python, Node and HyperFrames (npx --yes hyperframes). No video editor app. Sound effects are real recordings from the skill's royalty-free library (assets/sfx); the music is generated locally for this short (ACE-Step 1.5 XL, music_takes.py); both fall back to sounds and beds synthesized in code when the library or the GPU model is missing. You may install what you need locally inside this project (npm packages in the project folder, pip into a local venv), without asking. Never install system-wide software.
 
 WORK FULLY AUTONOMOUSLY
 - Don't ask me anything after this message. Run every step start to finish and finish with final.mp4 exported.
@@ -16,6 +16,16 @@ INPUTS
 - Camera video: in this project folder
 - Clean audio: in this project folder if there is one; otherwise the video's embedded audio track
 - Cover title (frame 0): from the user's request; if none is given, you come up with one
+- How many shorts (when the user doesn't say): Leon's rule (2026-10-14) - the most critical, most interesting moments for
+  TikTok, Instagram and YouTube Shorts, usually 3-5 and never more than 5 per video. What makes a moment (the reference
+  shorts, examples/harness-engineering/README.md):
+  - one self-contained idea a stranger understands with no context from the long video; no two shorts on the same idea
+  - a hook with something concrete in it: a number or a jump ("from only 6.7% ... to almost 70%"), a surprising cost, a
+    question everyone has, a striking visual. If the best hook comes later in the source, move it to the front.
+  - a payoff: the speaker's own summary or punchline as the outro line, even from much later in the video
+  - things to show: real pages, UI, footage or numbers for most lines (a moment that would be only talking head and
+    generic diagrams is a weaker pick)
+  - about 35-50 s; cut asides and repeats, keep the personality
 - The full video on YouTube (URL or title): from the user's request, otherwise found as section 8b says
 
 DELIVERABLES (in a new folder edit/)
@@ -45,7 +55,7 @@ Sample about 8 frames per kept take (then 100 ms steps around any head turn) and
 4. THE THREE LAYOUTS
 Canvas 1080x1920. Every short rotates through all three, with hard cuts on the joins:
 a) Full cam: my footage cover-fitted (the centre slice of a landscape source).
-b) Split, cam at the bottom with my head popping out: a full-frame 1080x1920 graphic sits behind everything, with its content in y 40-900 (the main element's bottom edge at 880-900). On top of it goes a rounded camera card, 1210x864 at x -65, y 1200, corner radius 200 (squircle), bleeding off the left, right and bottom edges. For a 16:9 source, scale the footage to 1890x1063 and place it at x -405, y 1008. The card shows that footage through its window, and ABOVE the card's top edge only my matted head and shoulders show: the same scaled footage with a background-removal alpha matte (hyperframes remove-background or an equivalent), feathered 40 px at the card's top edge, pixel-aligned with the card so the head never tears from the body when I move. The matte and the card must come from the same source frame on every frame; verify this on fast head moves. For a portrait source (e.g. a webcam picture-in-picture), derive the geometry from my measured face: my WHOLE face, hair to chin, must be visible (the hair popping ~100 px above the card edge, the chin inside the visible card, never cut off by the frame's bottom). If that scale leaves the card's sides uncovered, fill the strips with a soft, enlarged, blurred copy of the same frame, feathered into the sharp footage. Check one full-resolution frame per split run.
+b) Split, cam at the bottom with my head popping out: a full-frame 1080x1920 graphic sits behind everything, with its content in y 40-900 (the main element's bottom edge at 880-900). On top of it goes a rounded camera card, 1210x864 at x -65, y 1200, corner radius 200 (squircle), bleeding off the left, right and bottom edges. For a 16:9 source, scale the footage to 1890x1063 and place it at x -405, y 1008. The card shows that footage through its window, and ABOVE the card's top edge only my matted head and shoulders show: the same scaled footage with a background-removal alpha matte (hyperframes remove-background or an equivalent), feathered 40 px at the card's top edge, pixel-aligned with the card so the head never tears from the body when I move. The matte and the card must come from the same source frame on every frame; verify this on fast head moves. The matte is Robust Video Matting (matte_rvm.py: fine hair, steady, never grabs a guitar or lamp touching the head); u2net is only the fallback. For a portrait source (e.g. a webcam picture-in-picture), derive the geometry from my measured face: my WHOLE face, hair to chin, must be visible (the hair popping ~100 px above the card edge, the chin inside the visible card, never cut off by the frame's bottom). If that scale leaves the card's sides uncovered, fill the strips with a soft, enlarged, blurred copy of the same frame, feathered into the sharp footage. Check one full-resolution frame per split run.
 c) Full visual: a full-frame graphic.
 Rules:
 - The hook (first sentence) is always the split. The outro (the CTA line onwards) is always full cam. Direct-to-camera lines (opinions, punchlines) are full cam. Screen recordings, news pages and product UI that needs zooming inside it are full visuals. A single screenshot, a card, a logo row or a short list is the split.
@@ -53,45 +63,45 @@ Rules:
 - Write the plan as runs tiling [0, END] before building any graphic.
 
 5. GRAPHICS (HyperFrames, one composition per run; use parallel subagents)
-The style is luxury tech: one bright world of floating white cards, and a camera that moves through it.
-- Ground: a radial near-white fill (#FFFFFF at 50%/36%, falling to #F3F3F0 at the edges). No grid, no orbs, nothing dark anywhere.
-- Every object off the ground carries one three-layer shadow: 0 60px 120px rgba(24,24,32,.16), 0 24px 48px rgba(24,24,32,.10), 0 4px 10px rgba(24,24,32,.06). Radii: media cards 3% of the width, docs 40, tiles 72, phones 84.
-- Type: Poppins throughout. Headline 96/700, subhead 52/700, body 30/400; nothing under 30 px. Ink #111111. Accent Clay #D97757 for fills, #B25730 for Clay text on white, highlight band #FBEEE8, green #34C759 for checks, red #FF3B30 for stamps.
+The style is the channel's own design system ("Leon YouTube", C:\cognaitiv-ai\design-system\leon-youtube, the system his slides are built in; the engine's default `theme: 'stage'`): a graphite stage lit from above, with cards floating in it, and a camera that moves through it. The B-roll looks like his deck come alive.
+- Stage: #18191C at the top to #0B0C0E at the bottom under a soft overhead spotlight, two faint light beams, a vignette, and the horizon wave of azure dots (in a split just above the camera card, in a full visual under the caption band). No light theme (the old white world is `theme: 'paper'`, only on request).
+- Surfaces: glass for diagrams and statements (`kind: 'glass'`: stage-800 at 62% with a 24 px backdrop blur, a white hairline, the long panel shadow; `highlight: True` adds the accent hairline and bloom, one element per scene); white paper / windows for product UI, chats, files and captures (`window`, `paper`, `media`, `capture`); the speaker's glossy icon tiles (`tile_html`) for personality. Radii: glass 32, window / paper 24, capture 36, tiles 28.5%.
+- Type: Figtree 600 for everything you read (headline 96 at -0.03em, title 54 at -0.025em, subtitle 46 in the accent, body 32 in text-secondary), Geist Mono 500 for uppercase labels (0.14em tracking); nothing under 30 px. On the stage: white, #A3A6AD, #7E818A. On paper: ink #111214 and #5F636B.
+- One accent per scene: azure #2F95FF by default, ember #FF8A5B for limits, costs and warnings; mint #4FD6A0 for passes and checks, iris #9C7CFF for tiles. A highlight band on a captured light page is an azure wash under a multiply screenshot.
 - A world camera moves over the cards: a glide (sine.inOut, scale change 0.04 at most), a step to the next item (0.5 s power3.inOut, starting 0.25 s before the word that names it), a push onto the card being talked about (1.2-2 s power2.inOut, up to ~1.6x), a pull back to reveal the bigger picture (1-2 s), and at most ONE whip per run (0.45 s out power3.in, 0.6 s in power3.out). Frame 0 of every run is the landing state, sharp, with the camera at rest.
 - Depth of field: the card being read is in focus; neighbours blur up to 14 px and dim 30% as the camera pushes. A new hero sends the old one back to a 9 px blur at 40% opacity. Never blur a word the viewer needs to read.
 - Motion blur: blur the camera viewport along its screen velocity on every frame (sigma = 0.29 x speed x 0.75/60, capped at 24 px), then render at 240 fps and blend 3 of every 4 frames down to 60 fps (ffmpeg tmix=frames=3,fps=60). Blur only mid-move; a blurred frame at rest is a bug.
 - Animate the action, never label it: no label pills, step chips or word rows restating the narration. A named product is its real UI, captured live (hyperframes capture or a headless screenshot) and doing the action: typing, streaming, clicking. While a product window is the subject, only a camera INSIDE the window moves (1.15-1.4x, 0.4-0.7 s power2.inOut); the world camera holds still. Named-product intro: its official logo large and centred first, then the UI.
 - "Claude Code" means the Claude desktop app UI, never a terminal, unless I'm talking about the terminal.
-- Anything that HAPPENED (a release, a quote, a number, a headline) shows its real source page. Check every figure I say against two or more reputable sources and report any disagreement. A real capture sits sharp in a fixed frame (x 24, y 200, 1032x1040, radius 36, white, shadowed) on a blurred, enlarged, WASHED near-white clone of itself (blur 40px, saturate .7, brightness 1.05, a 72% white wash over it) that moves with the footage. The frame never moves; the footage pans and zooms inside it.
+- Anything that HAPPENED (a release, a quote, a number, a headline) shows its real source page - the article, docs, X post, pricing page or repo - with the exact line I cite highlighted as I say it. When I mention one of my own videos, show its real YouTube watch page or thumbnail. Named products get their official logo. Check every figure I say against two or more reputable sources and report any disagreement. (Leon on the long-form edit that did this everywhere: "I absolutely love that.") A real capture sits sharp in a fixed frame (x 24, y 200, 1032x1040, radius 36, white, shadowed) on a blurred, enlarged, WASHED near-white clone of itself (blur 40px, saturate .7, brightness 1.05, a 72% white wash over it) that moves with the footage. The frame never moves; the footage pans and zooms inside it.
 - Full visuals keep content above y 1230 (main element's bottom edge at 1200-1230). Splits keep it in y 40-900 and fade the world out from y 900 over 160 px.
 - Keep every scene sparse: one dominant subject, at most one supporting cue, smooth eased motion, never frantic.
 - Duration of each composition = its run exactly. Check each render with a contact sheet before using it.
 
-6. COVER, CAPTIONS, CTA
-- Cover: frame 0 only. My title in Poppins bold 110, black on a white rounded box (radius ~2.8%, soft shadow), centred at y 0.13 (about y 262-603 for two lines, ~50 px side padding). On frame 0 the intro graphic keeps everything below y 620.
-- Captions burned in from the FINAL voice track's word timings, starting at 17 ms (frame 0 stays clean). 1-3 words per chunk, Poppins bold 74, white, black stroke 10, no box. Keep clear word spacing (the stroke must never swallow the spaces). After every 2-3 normal chunks, one or two meaningful words (a product name, number, benefit, the CTA keyword) switch to Instrument Serif bold italic in pure yellow #FFFF00, same size and stroke. Never two highlights in a row, never function words.
-- Caption position per run, never on my face, the card edge or a visual: split = centred in the gap, y 941-1114; full cam and full visual = lower third, y 1290-1560; a visual with low content = top, y 365-634; outro = centre, y 1037-1306. A caption that spans a layout cut moves with the cut: position it from the run of the frame it's on.
-- CTA card, outro only, lower third (box 43, 1344, 994x276): one centred comment box on a transparent canvas, a default avatar, the keyword from my CTA line typed with a blinking caret, then a Post button press. Nothing else: no panel, no background, no "DM me", no platform text.
+6. COVER, CAPTIONS, CTA (the channel's design system, as on the long-form edits)
+- Cover: frame 0 only. My title in white Figtree 600 (104 px, -0.03em) on a graphite glass card (stage-800, accent hairline and bloom, the long panel shadow, radius 36) with the azure accent line drawn beneath the words, centred at y ~432 (inside y 262-603 for two lines). On frame 0 the intro graphic keeps everything below y 620.
+- Captions burned in from the FINAL voice track's word timings, starting at 17 ms (frame 0 stays clean). 1-3 words per chunk, Figtree bold 74, white, a 10 px graphite stroke (#0B0C0E), no box. Keep clear word spacing (the stroke must never swallow the spaces). After every 2-3 normal chunks, one or two meaningful words (a product name, number, benefit, the CTA keyword) become a keyword chip - the long-form keyword pop Leon locked in: a graphite glass chip (stage-800 at 88%, accent hairline + bloom, top highlight, radius 28) with the words in white Figtree 600 (70 px, -0.025em) and the azure line drawn in beneath them; it pops in over 0.18 s and the line sweeps in from 0.08 s over 0.32 s. Never two chips in a row, never function words. Never the old yellow serif ("ugly").
+- Caption position per run, never on my face, the card edge or a visual: split = centred in the gap, y 941-1114; full cam and full visual = lower third, y 1290-1560; a visual with low content = top, y 365-634; outro = just above the CTA card, centred at y 1250 (y ~1200-1300; the old centre band 1037-1306 sat on the chin of a webcam face filling the frame). A caption that spans a layout cut moves with the cut: position it from the run of the frame it's on.
+- CTA card, outro only, lower third (box 43, 1344, 994x276). Leon's rule (2026-10-14): EVERY short ends by sending viewers to the full video - never a comment keyword, whatever my outro line says. The card (`cta_mode: 'full_video'`, the default): graphite glass (stage-800, white hairline and top highlight, the long panel shadow), my glossy azure play tile, "Watch the full video" typed in white Figtree 600 with a blinking azure caret, and an azure arrow button pointing DOWN at the full-video link under the short (YouTube's related video; "link in bio" on TikTok / Instagram), with a soft glow, pressed once the line is typed (it darkens to azure-ink). Nothing else: no panel, no background, no "DM me", no platform text. (The old comment box typing a CTA keyword stays available as `cta_mode: 'comment'` + `cta_keyword`, only on request.)
 
-7. AUDIO: SYNTHESIZE EVERYTHING, THEN MIX TO THESE LEVELS
-Synthesize with numpy/scipy, or the Web Audio API rendered offline with OfflineAudioContext. Clean, modern and premium, never cartoony.
+7. AUDIO: REAL SOUNDS, GENERATED MUSIC, THEN MIX TO THESE LEVELS
+Sound effects are real recordings from the skill's royalty-free library (assets/sfx: Freesound CC0 and the Mixkit free licence, commercial use and YouTube allowed, no attribution; every source in its manifest), rotated so no sound plays twice in a row. Leon called the synthesized ones "bland and generic". Clean, modern and premium, never cartoony. Synthesized stand-ins only when the library is missing.
 - Voice (stems/voice.wav): the J-cut track from step 2, loudness-normalized to -14 LUFS integrated.
 - SFX (stems/sfx.wav), one sound per meaningful VISIBLE event only:
   - a soft bubbly click on real button presses and taps
   - a short soft key press on typing (a light tick stream for longer typing or data streaming)
   - a dull soft pop on a card, tile or device landing
   - a gentle two-note notification chime on an answer, modal or confirmation
-  - a LOW, airy whoosh (filtered noise) whose loudest moment lands exactly on the midpoint of each whip, and only on whips: at most one per run, three per short. Rotate 3-4 variants so no two in a row repeat.
-  - Nothing on layout cuts, camera steps, pushes, glides or zooms. A logo lockup and any CTA under it get a whoosh or nothing, never a UI sound.
-  - Levels, peak against the voice's peak: clicks, pops and chimes -10 dB, whooshes -9 dB, key presses and ticks -16 dB.
-- Intro riser (stems/riser.wav): a low, swelling riser, about 2-3 s long, whose audible end lands exactly on the join where the hook ends and the first point starts. It's the one sound allowed to rise into a cut. Peak about -12 dB against the voice peak.
-- Music (stems/music.wav): synthesized for THIS short, never a repeat. Pick the style that fits the topic and energy, and set a mood (warm or moody). The styles are:
-  - lofi hip-hop: the default for talking-head tech content. Dusty swung drums, Rhodes 7th/9th chords, warm bass, vinyl crackle, tape wobble.
-  - chillhop: relaxed how-tos.
-  - ambient: serious or reflective topics.
-  - synthwave: retro, hype, "the future is here".
-  - upbeat house: launches and wins.
-  Key, tempo, chord progression, drum pattern and texture come from a per-short seed (scripts/music.py), so no two shorts share a track. Arrange it to the edit: a low-passed intro under the hook, then the beat drops exactly on the hook -> first-point join, where the riser lands. Level: about -31 to -33 LUFS integrated, sidechain-ducked ~5 dB under my voice. It fades in over ~0.8 s and fades out to end exactly on END. Log the style, mood, key, tempo and seed in the report.
+  - a marker-pen highlight swish on every highlight band drawn in (a `scaleX` reveal)
+  - a whoosh whose loudest moment lands exactly on the midpoint of each whip, and only on whips: at most one per run, three per short.
+  - a minimal hit (the library's `hit_minimal`) on the hook -> first-point join, with the riser.
+  - Nothing on layout cuts, camera steps, pushes, glides or zooms. A logo lockup and any CTA under it get a whoosh or nothing, never a UI sound. An optional sound (a highlight) never stacks within 0.15 s of another.
+  - Levels, peak against the voice's peak (library recordings are fuller than synthesized ones): clicks and pops -14 dB, chimes and whooshes -12 dB, highlights -16 dB, the hit -10 dB, key strokes -20 dB.
+- Intro riser (stems/riser.wav): the library's cinematic build, cut right after its peak, whose loudest moment lands exactly on the join where the hook ends and the first point starts. It's the one sound allowed to rise into a cut. Peak about -12 dB against the voice peak.
+- Music (stems/music.wav): generated for THIS short with ACE-Step 1.5 XL (MIT licence; outputs may be used commercially), never a repeat (the seeds come from the title). music_takes.py writes three takes in one model load, cuts each so its lift (drums and bass coming in) lands exactly on the hook -> first-point join, and picks the best automatically: instrumental, a clear lift on the join, no gaps or dips. The style presets:
+  - cinematic: the default - Leon's pick by ear for the Harness Engineering hook ("That's the one!"): a solo piano ostinato and soft pads, then pulsing staccato strings, warm bass and a steady modern drum groove; hopeful, documentary, not an epic trailer. ~105 bpm.
+  - indie (guitar and marimba arpeggios, upbeat), piano_pop (felt piano, punchy drums), electro_pop (four-on-the-floor, launches), and lofi, chillhop, ambient, synthwave, upbeat for those moods.
+  Level: 15 LU under my voice (about -29 LUFS under a -14 LUFS voice; 18 LU under was "barely there"), sidechain-ducked ~5 dB more while I speak. It fades in over ~0.8 s and fades out to end exactly on END. Deliver every take as an MP3 next to the short, the one used marked, so I can swap by ear. Without the GPU model, the synthesized beds of scripts/music.py (a low-passed intro, the beat dropping on the join, -31 LUFS) stand in. Log the style, take, seed and model (or the synthesized style, key, tempo and seed) in the report.
 - Final mix: about -14 LUFS integrated, true peak at or below -1 dBFS.
 
 8. REPORT (edit/.../report.md)
@@ -100,8 +110,8 @@ Synthesize with numpy/scipy, or the Web Audio API rendered offline with OfflineA
 - Eye contact: where the camera hides and why.
 - The layout plan: runs tiling [0, END], with layout, times and durations, plus the camera and split geometry used.
 - Graphics: one line per composition (what it shows, real sources used, camera moves, whips).
-- Cover, captions (highlight words) and CTA keyword.
-- Audio: every SFX event with its time and level, the riser timing, the music (style, mood, key, tempo, seed), and the final loudness and peak.
+- Cover, captions (highlight words) and the CTA.
+- Audio: every SFX event with its time, the library sound used and its level (sfx_log.json), the riser, the music (style, take, seed, model and the takes it beat; or the synthesized style, key, tempo and seed), and the final loudness and peak.
 - Fact check: each figure I say, with 2+ sources, and any disagreement.
 - The thumbnail: its time and run, what it shows, and why it beat the other candidates.
 - The full video the TikTok and Instagram copy points to, and where its title came from (section 8b).
@@ -110,7 +120,7 @@ Synthesize with numpy/scipy, or the Web Audio API rendered offline with OfflineA
 8b. PUBLISHING PACKAGE (edit/PUBLISH.md)
 Every short goes out on YouTube Shorts, TikTok and Instagram Reels, and each platform gets its own copy. One Markdown file for the whole project, with one section per short, in order. If the file already exists from an earlier run, add or update only the sections for the shorts you made; leave the others as they are. Write it after the short is final, from what the short actually says. On every platform, every claim must be backed by the short and hold against the fact check.
 
-The full video. TikTok and Instagram viewers are sent to the full video on YouTube, and the Short links to it with YouTube's Related video field. Use the URL or title I give. Otherwise, when the shorts are cut from a finished long-form edit, take its title from that edit's publishing copy (a davinci-resolve-pro-edit run writes it to pro-edit-media/PUBLISH.md next to the sources). With neither, point to my channel, Leon van Zyl, without a title. Log which one you used in the report. Never invent a URL or a handle.
+The full video. TikTok and Instagram viewers are sent to the full video on YouTube, and the Short links to it with YouTube's Related video field. Use the URL or title I give. Otherwise, when the shorts are cut from a finished long-form edit, take its title from that edit's publishing copy (a davinci-resolve-pro-edit run writes it to pro-edit-media/PUBLISH.md next to the sources). With neither, point to my channel, Leon van Zyl, without a title. Whenever you have the URL or video ID, use the title the video actually went live with (YouTube oEmbed: `https://www.youtube.com/oembed?url=<watch URL>&format=json`); the file name and the draft title often differ from it. Log which one you used in the report. Never invent a URL or a handle.
 
 YouTube Shorts
 - Title: under 55 characters (54 at most; count them), so it's never truncated. Its job is the click: a stranger scrolling past must want to know more.
@@ -130,16 +140,14 @@ YouTube Shorts
 TikTok (a video has one caption and no title; TikTok search reads the whole caption)
 - First line: the hook, under 100 characters so it shows before "more". The YouTube title's idea in a conversational voice; it still needs the power word and the open loop.
 - Then one or two lines with the words people type into TikTok search for this topic (the tool, the task, the problem), said naturally. Specifics beat adjectives: the real numbers, names and results from the short.
-- Then the full video, on its own line: 🎬 Full video on YouTube: "<full video title>" (link in bio). With no title: 🎬 Full video on my YouTube channel, Leon van Zyl (link in bio).
-- Then the short's CTA in the speaker's words, if it has one: the keyword and what it gets you (e.g. 💬 Want to try this prompt yourself? Comment PROMPT).
+- Then the CTA, always the full video (Leon's rule), on its own line: 🎬 Watch the full video on YouTube: "<full video title>" (link in bio). With no title: 🎬 Watch the full video on my YouTube channel, Leon van Zyl (link in bio).
 - Then 3-5 hashtags on the last line: the same subject tags as YouTube, plus one or two TikTok communities that fit (#TechTok, #CodingTok). No #fyp, #foryou or #viral.
 - About 300 characters in all. No URLs: caption links aren't clickable on TikTok.
 
 Instagram Reels
 - First line: the hook, under 125 characters (Instagram cuts the caption there with "more"). Same idea as the YouTube title, written for Instagram; power word and open loop still apply.
 - Then two or three short lines, one idea each, each separated by a blank line: what the viewer learns or sees, with the natural keywords people search for. Instagram search and Google both read captions.
-- Then the full video, on its own line, as on TikTok.
-- Then the short's CTA in the speaker's words, as on TikTok.
+- Then the CTA line, as on TikTok: 🎬 Watch the full video on YouTube: "<full video title>" (link in bio).
 - Then 3-5 hashtags on the last line. Instagram allows at most 5 (enforced since December 2025); more gets the post blocked or trimmed.
 - No URLs: caption links aren't clickable on Instagram.
 
@@ -172,8 +180,7 @@ Layout of each section (every piece of copy in its own fenced code block, so it 
   <hook line>
   <1-2 keyword lines>
 
-  🎬 Full video on YouTube: "<full video title>" (link in bio)
-  💬 <CTA>
+  🎬 Watch the full video on YouTube: "<full video title>" (link in bio)
 
   #Tag1 #Tag2 #Tag3 #Tag4
   ```
@@ -187,9 +194,7 @@ Layout of each section (every piece of copy in its own fenced code block, so it 
 
   <idea 2>
 
-  🎬 Full video on YouTube: "<full video title>" (link in bio)
-
-  💬 <CTA>
+  🎬 Watch the full video on YouTube: "<full video title>" (link in bio)
 
   #Tag1 #Tag2 #Tag3 #Tag4
   ```

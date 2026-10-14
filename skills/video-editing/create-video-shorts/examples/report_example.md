@@ -1,5 +1,8 @@
 # Short 01: "Half the price of Opus?"
 
+> Made before October 2026 in the old white "paper" theme with synthesized audio: the structure of the report still
+> applies; today's shorts use the brand theme, library SFX and a generated music take (spec sections 5-8).
+
 - **File:** `final.mp4`, 1080×1920, 60 fps, H.264 High, AAC 48 kHz stereo, 52.667 s (3,160 frames).
 - **Stems:** `stems/voice.wav`, `stems/sfx.wav`, `stems/riser.wav` and `stems/music.wav`. All run the full 52.667 s, 48 kHz, 24-bit.
 - **Cover (frame 0):** "Half the price / of Opus?", written by me from the hook, because no title was given.

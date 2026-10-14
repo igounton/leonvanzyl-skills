@@ -6,6 +6,34 @@ It is generated from a compact Python config by `scripts/build_gfx.py <sk>`, whi
 
 Contents: [Build helpers](#build-helpers) · [CFG](#cfg) · [Cards](#cards) · [Camera moves](#camera-moves) · [Depth of field](#depth-of-field) · [Captures](#real-captures-full-visual) · [Split rules](#split-rules) · [SFX](#sfx-events) · [Check](#checking)
 
+## Theme: the channel's design system (default)
+`theme: 'stage'` (the default; `'paper'` restores the old bright white world, only on request) paints Leon's "Leon YouTube"
+design system, the one his slides use: the graphite stage with soft light from above, two faint beams, a vignette and
+the horizon wave of azure dots (`wave: {level: 'low'|'middle'|'high', k: 1}` or `False`; a split's wave peeks over the
+camera card, a full visual's runs under the caption band). `accent: 'azure'` (default) or `'ember'` (limits, costs, warnings).
+- Card kinds: `glass` (diagrams, statements, lists; `highlight: True` = accent hairline + bloom, one per scene), `window` /
+  `paper` / `media` / `capture` (white, for product UI, chats, files and real pages), `tile`, `phone`, `logo`, `plain`.
+- CSS classes: `.display .h1 .h2 .sub .body .caption .label (.accent/.white) .mono .ink .ink2 .pill (.mint/.ember/.neutral)
+  .hair .band .caret`; tokens `var(--azure)`, `var(--accent)`, `var(--text-secondary)`, `var(--ink)` ... Figtree 600 and Geist Mono
+  are loaded from `gfx/assets/`. Nothing under 30 px.
+- `tile_html(color, glyph, size, tilt, svg=None)`: his glossy icon tiles (azure / iris / ember / mint; glyphs code, arrow,
+  check, shield, sparkle, bolt, bars, eyes, or your own white `<svg>`).
+- Text on the bare stage is white; text on paper is ink. Dark product UI sits in a white window frame or on glass.
+- The 9:16 code to copy first: THIS skill's `examples/harness-engineering/` (five shorts Leon called "spot on"):
+  `gfx_a.py` (real pages and posts banded on the word, real app footage from the raw recordings with logo chips and an
+  inner camera), `gfx_b.py` (concept diagrams at true scale, real CLI / docs, the keyframe library), `gfx_c.py` (one
+  continuous world across a whole short). The long-form reference edit in the davinci-resolve-pro-edit skill,
+  `examples/harness-engineering/`, has more of the same patterns in 16:9: re-lay them out for 9:16.
+- **Footage layering:** HyperFrames `<video>` elements are root children ABOVE the world viewport (z-index 3). So anything
+  drawn over live footage (a highlight band, a logo chip) must be a root-level layer above it (z-index 4/5), and a band
+  that should ride moving footage needs a layer that copies the video's transform and clip every frame (`vov()` in
+  `gfx_a.py`). In a split, mask the footage by hand to the world's fade (y 900 -> 1060) so it never shows in the caption band.
+- **One continuous world for a multi-run concept** (a factory, a pipeline, a loop): write the world as one pure function
+  of the short's own time F (run `T0` + t) and let every composition render its window of it (`gfx_c.py` `world()`), so
+  the story carries across the cuts, even across a full-cam run in between.
+- **Heavy pages:** a full-resolution clip plus its blurred backdrop clone can run Chrome out of memory. Give the backdrop
+  its own 640 px wide copy; render with `NODE_OPTIONS=--max-old-space-size=16384`.
+
 ## Build helpers (`scripts/build_gfx_common.py`)
 - **`words(sk, ri)`:** returns `(run, words)`. Word times are relative to the run start, taken from `cut.json`.
 - **`W(words, 'text', n=1)`:** the start time of the n-th occurrence of a word, with punctuation stripped. Use it for every cue, e.g. a step starts at `W(ws, 'opus') - 0.25`.
@@ -26,7 +54,7 @@ cfg = dict(
   cards=[...], moves=[...], heroes=[...],
   pushRef=1.0,                          # camera scale that counts as "not pushed" (neighbour blur grows as s exceeds it)
   reveals=[dict(el='hlb2', t=2.1, dur=0.5, type='scaleX'|'fade'|'pop'|'fadeout')],
-  typings=[dict(el='cmd', t0=0.3, cps=14, text='claude update', caret=True)],   # typed text with clay caret
+  typings=[dict(el='cmd', t0=0.3, cps=14, text='claude update', caret=True)],   # typed text with the accent caret
   sfx=[dict(t=1.35, type='whoosh'|'click'|'pop'|'chime'|'key')],                 # run-relative; audio.py mixes them
 )
 ```
@@ -46,8 +74,8 @@ dict(id='bench', kind='media'|'doc'|'tile'|'phone'|'capture'|'logo'|'plain',
 ```
 - **Shadows:** every non-logo card gets the spec's three-layer shadow automatically.
 - **Landing:** a landing uses power3.out: scale 0.92 → 1, +70 px → 0, fade in. Add a `pop` SFX at `land.t`. Nothing lands at frame 0, and the HERO is already on screen at frame 0: the cut lands on it. Landing the hero at 0.05 s leaves empty frames after the cut. Only supporting cards (logo tiles, a message arriving) land later.
-- **Highlight bands on screenshots:** blend modes are isolated per card. Put the band `div` under the screenshot inside the same card `html`, and give the `<img>` `mix-blend-mode:multiply`. See the `bench` card in `gfx_s1.py`.
-- **Highlights on dark UI:** a multiply band vanishes on a dark app. Instead, pre-render the real text re-inked #111 on #FBEEE8 as an overlay revealed by a left-to-right wipe, or use a clay #D97757 outline with a dark clay fill, screen-blended, with a hole over bright elements.
+- **Highlight bands on screenshots:** blend modes are isolated per card. Put the band `div` (class `band`: an azure wash) under the screenshot inside the same card `html`, and give the `<img>` `mix-blend-mode:multiply`; reveal it with a `scaleX` reveal on the word (audio.py adds the marker swish). On an overlay layer, `overlayBlend: 'multiply'` does the same. See the `bench` card in `gfx_s1.py`.
+- **Highlights on dark UI:** a multiply band vanishes on a dark app. Instead, pre-render the real text re-inked dark on the azure wash as an overlay revealed by a left-to-right wipe, or use an azure outline with a soft azure glow, with a hole over bright elements.
 
 ## Camera moves
 `moves` is a list of `dict(t, dur, kind, to=dict(x, y, s), ease=None)`. Geometric scale interpolation is built in.

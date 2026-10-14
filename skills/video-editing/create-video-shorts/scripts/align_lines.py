@@ -8,7 +8,7 @@ def _wm():
     try: return WhisperModel('large-v3', device='cuda', compute_type='float16', num_workers=ASR_WORKERS)
     except Exception as e:
         print('no CUDA for Whisper (' + str(e)[:60] + ') - using CPU int8 (slower)'); return WhisperModel('large-v3', device='cpu', compute_type='int8')
-S=json.load(open('shorts.json')); db=np.load('rms10ms.npy')
+S=json.load(open('shorts.json', encoding='utf-8')); db=np.load('rms10ms.npy')
 x,sr=sf.read('clean16.wav'); x=x.astype(np.float32)
 wm=_wm()
 def sil_back(t):
@@ -42,7 +42,8 @@ for sk,sv in S.items():
     for L in sv['lines']:
         t0=sil_back(L['a']-0.15); t1=sil_fwd(L['b']+0.25)
         seg=x[int(t0*sr):int(t1*sr)]
-        W=[{'w':FIX.get(w.strip().lower().strip('.,'),w.strip())} for w in RAW[(sk,L['id'])]]
+        # project.json asr_fixes: a fix may be several words ("tardis": "The harness"); they are aligned one by one
+        W=[{'w':p} for w in RAW[(sk,L['id'])] for p in FIX.get(w.strip().lower().strip('.,'),w.strip()).split()]
         al=align(seg,[w['w'] for w in W])
         for w,a in zip(W,al): w['s'],w['e'],w['sc']=round(a[0]+t0,3),round(a[1]+t0,3),round(a[2],3)
         # match line text tokens to window tokens
@@ -94,6 +95,18 @@ for sk, sv in S.items():
                             changed = True; break
                     if changed: break
             print(f'{sk} {L["id"]} echo collapsed:', ' '.join(w['w'] for w in ws[a['fi']:a['li'] + 1]))
+        # Whisper splits numbers and hyphenated words into pieces ("6 .7 %", "30 ,000", "GPT -5 .2", "sub -agents"): rejoin
+        # them (the first piece's start, the last piece's end) so the span counts like the plan's text and captions read
+        # "6.7%", "30,000", "GPT-5.2", "sub-agents"
+        while a['li'] + 1 < len(ws) and re.match(r'^([.,]\d|%|-\w)', ws[a['li'] + 1]['w'].strip())                 and ws[a['li'] + 1]['s'] - ws[a['li']]['e'] < 0.6:
+            a['li'] += 1                                   # a piece just past the matched end ("GPT -5" + ".2") belongs to the line
+        i = a['fi'] + 1
+        while i <= a['li']:
+            t = ws[i]['w'].strip()
+            if re.match(r'^([.,]\d|%|-\w)', t):
+                ws[i - 1]['w'] = ws[i - 1]['w'].rstrip() + t; ws[i - 1]['e'] = ws[i]['e']; del ws[i]; a['li'] -= 1
+            else:
+                i += 1
         # Captions use the plan's exact words (casing at sentence starts, "five" not "5", a word the ASR misheard) with the
         # aligned timings, whenever the aligned span has as many words as the line's text.
         span = ws[a['fi']:a['li'] + 1]

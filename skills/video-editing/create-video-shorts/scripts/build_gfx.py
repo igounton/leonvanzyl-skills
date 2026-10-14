@@ -13,7 +13,7 @@ for _ in range(600):
     except FileExistsError: time.sleep(0.05)
 try:
     for f, new in (('gfx/sfx_events.json', G.SFX), ('gfx/thumbs.json', G.THUMBS)):
-        old = json.load(open(f)) if os.path.exists(f) else {}
+        old = json.load(open(f, encoding='utf-8')) if os.path.exists(f) else {}
         old.update(new)
         json.dump(old, open(f, 'w'), indent=1)
 finally:

@@ -15,7 +15,7 @@ import cv2, numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sk = sys.argv[1]; FPS = 60
-C = json.load(open('cut.json'))[sk]; RUNS = C['runs']; WORDS = C['words']
+C = json.load(open('cut.json', encoding='utf-8'))[sk]; RUNS = C['runs']; WORDS = C['words']
 snap = lambda t: round(t * FPS) / FPS           # compose.py renders whole frames: name the files the way it does
 path = lambda t: f'{sk}/thumb/f_{t:07.3f}.png'
 AREA = {'split': (40, 900), 'fv': (0, 1230), 'fc': (0, 1920)}   # where sharpness counts: the graphic above the card, the main element
@@ -62,7 +62,7 @@ if '--pick' in sys.argv:
         im.save(buf, 'JPEG', quality=q, subsampling=0, optimize=True, progressive=True)
         if buf.tell() < 2_000_000: break
     open(f'{sk}/thumbnail.jpg', 'wb').write(buf.getvalue())
-    cands = json.load(open(f'{sk}/thumb/candidates.json')) if os.path.exists(f'{sk}/thumb/candidates.json') else []
+    cands = json.load(open(f'{sk}/thumb/candidates.json', encoding='utf-8')) if os.path.exists(f'{sk}/thumb/candidates.json') else []
     json.dump(dict(t=round(t, 3), run=r['i'], layout=r['layout'], text=r.get('text', ''), quality=q, bytes=buf.tell(), candidates=cands),
               open(f'{sk}/thumbnail.json', 'w'), indent=1)
     print(f'{sk}/thumbnail.jpg  1080x1920  q{q}  {buf.tell() / 1e6:.2f} MB  from {t:.3f} s (run {r["i"]}, {r["layout"]})')
@@ -72,7 +72,7 @@ if '--pick' in sys.argv:
     sys.exit(0)
 
 # the candidates: what the compositions marked, plus any times given here
-marked = json.load(open('gfx/thumbs.json')) if os.path.exists('gfx/thumbs.json') else {}
+marked = json.load(open('gfx/thumbs.json', encoding='utf-8')) if os.path.exists('gfx/thumbs.json') else {}
 T = []
 for r in RUNS:
     for m in marked.get(f'{sk}_r{r["i"]}', []):

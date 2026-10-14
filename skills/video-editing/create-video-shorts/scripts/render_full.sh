@@ -13,6 +13,7 @@
 # PRODUCER_ENABLE_BROWSER_POOL=false gives every worker its own Chrome. With the default pool, all workers are tabs of ONE
 # browser whose single GPU process encodes every PNG screenshot, so PNG capture tops out at ~15 fps however many workers
 # you add (measured: 1 worker 11 fps, 16 workers 15 fps). Separate browsers: 4 workers 29 fps, 8 -> 41 fps, 16 -> 51 fps.
+export PYTHONUTF8=1   # Python reads/writes UTF-8 on Windows too (cp1252 garbled non-ASCII names in captions)
 export PRODUCER_ENABLE_BROWSER_POOL=false
 cd "$(dirname "$0")/../gfx"
 mkdir -p png240 out60 .render_slots

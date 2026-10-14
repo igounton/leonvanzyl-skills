@@ -3,7 +3,7 @@ Written by init_project.py, completed by detect_camera.py. Edit it by hand to ov
 import json, os
 
 _P = 'project.json'
-_cfg = json.load(open(_P)) if os.path.exists(_P) else {}
+_cfg = json.load(open(_P, encoding='utf-8')) if os.path.exists(_P) else {}
 
 
 def get(key, default=None):

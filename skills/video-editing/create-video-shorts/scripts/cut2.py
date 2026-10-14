@@ -2,7 +2,7 @@ import json, sys, numpy as np, soundfile as sf, pyloudnorm as pyln, os
 sys.path.insert(0,'scripts'); from align import spoken
 FPS=60; SR=48000
 db=np.load('rms10ms.npy'); X,_=sf.read('clean48.wav'); X=X.astype(np.float32)
-S=json.load(open('shorts.json')); A=json.load(open('line_align.json'))
+S=json.load(open('shorts.json', encoding='utf-8')); A=json.load(open('line_align.json', encoding='utf-8'))
 def I(t): return int(round(t*100))
 def onset_at(fs, pe):
     """return (onset, contiguous). fs: aligned first-word start; pe: previous word end (or None)"""

@@ -1,16 +1,25 @@
-"""Synthesize every sound for a short (numpy/scipy only) and write the stems + mix.
-usage: python audio.py s1  -> reads cut.json, gfx/sfx_events.json, <sk>/events_extra.json ; writes <sk>/stems/*.wav"""
-import json, sys, os, numpy as np, soundfile as sf, pyloudnorm as pyln
+"""Every sound of a short, and the stems + mix.
+usage: python audio.py s1  -> reads cut.json, gfx/sfx_events.json (+ the gfx pages' reveals), <sk>/events_extra.json,
+                              <sk>/music/pick.json ; writes <sk>/stems/*.wav, <sk>/mix.wav, <sk>/music.json, <sk>/sfx_log.json
+SFX: real recordings from the skill's royalty-free library (assets/sfx, sfxlib.py: rotated, whooshes and risers land
+their loudest moment on the cut). Without the library, the synthesized sounds below stand in.
+Music: the generated take music_takes.py picked (or shorts.json music.file); without one, the synthesized bed (music.py)."""
+import json, sys, os, re, glob, zlib, numpy as np, soundfile as sf, pyloudnorm as pyln
 from scipy import signal
+sys.path.insert(0, 'scripts'); import sfxlib
 SR = 48000
 sk = sys.argv[1]
-C = json.load(open('cut.json'))[sk]
+C = json.load(open('cut.json', encoding='utf-8'))[sk]
+SH = json.load(open('shorts.json', encoding='utf-8'))[sk]
 END = C['END']; N = int(round(END * SR))
+JOIN = C['runs'][0]['T1']                       # the hook -> first point join: riser, sting and music lift land here
 rng = np.random.default_rng(7)
 voice, _ = sf.read(f'{sk}/voice.wav'); voice = voice.astype(np.float32)
+if voice.ndim == 1: voice = np.stack([voice, voice], 1)
 if len(voice) < N: voice = np.pad(voice, ((0, N - len(voice)), (0, 0)))
 voice = voice[:N]
 vpeak = np.abs(voice).max()
+meter = pyln.Meter(SR)
 
 def env_exp(n, tau):
     return np.exp(-np.arange(n) / (tau * SR))
@@ -27,7 +36,7 @@ def hp(x, fc, order=2):
 def bp(x, f0, f1, order=2):
     b, a = signal.butter(order, [f0 / (SR / 2), f1 / (SR / 2)], 'band'); return signal.lfilter(b, a, x)
 
-# ---------------- sound designs (mono, peak-normalised) ----------------
+# ---------------- synthesized stand-ins (mono, peak-normalised): used only when the library is missing ----------------
 def click():
     n = int(0.09 * SR); t = np.arange(n) / SR
     f = 1250 * np.exp(-t / 0.018) + 620          # bubbly downward chirp
@@ -68,7 +77,6 @@ def whoosh(variant, dur_out=0.45, dur_in=0.6):
     n = int((pre + post) * SR); t = np.arange(n) / SR; tm = pre
     nz = rng.standard_normal(n)
     lo, hi, q = [(180, 700, 1.2), (140, 560, 1.4), (220, 820, 1.1), (160, 640, 1.3)][variant % 4]
-    # centre frequency rises into the midpoint and falls after it
     x = np.clip((t - (tm - dur_out)) / dur_out, 0, 1); y = np.clip((t - tm) / dur_in, 0, 1)
     fc = np.where(t < tm, lo + (hi - lo) * x ** 1.6, hi - (hi - lo) * y ** 0.8)
     w = np.clip((fc - lo) / (hi - lo), 0, 1)
@@ -91,61 +99,132 @@ def riser(dur=2.6):
     s[-int(0.012 * SR):] *= np.linspace(1, 0, int(0.012 * SR))   # audible end exactly on the join
     return norm(s)
 
+# ---------------- levels (peak against the voice's peak) ----------------
+LEVEL = {'click': -10, 'pop': -10, 'chime': -10, 'whoosh': -9, 'key': -16, 'tick': -16, 'highlight': -14, 'ding': -12, 'sting': -10}
+# library recordings are fuller than the synthesized sounds, so everything sits a little lower; highlight swishes are
+# frequent, so they stay well under the voice
+LIB_LEVEL = {'click': -14, 'pop': -14, 'chime': -12, 'whoosh': -12, 'highlight': -16, 'ding': -16, 'sting': -10,
+             'key': -20, 'tick': -20, 'riser': -12}
+LIB_CAT = {'click': 'click', 'pop': 'pop', 'chime': 'chime', 'whoosh': 'whoosh', 'highlight': 'highlight', 'ding': 'ding',
+           'sting': 'sting', 'key': 'typing', 'tick': 'typing', 'riser': 'riser'}
+# Leon's picks from the long-form edits: the minimal hit on the hook end, the cinematic build as the riser
+LIB = sfxlib.Library(prefer=SH.get('sfx_prefer') or {'sting': ['hit_minimal'], 'riser': ['cinematic_build']})
+USE_LIB = bool(LIB.cats) and SH.get('sfx_library', True)
+
 # ---------------- events ----------------
+def gfx_cfg(rid):
+    try:
+        m = re.search(r'window\.CFG=(\{.*?\});</script>', open(f'gfx/{rid}.html', encoding='utf-8').read(), re.S)
+        return json.loads(m.group(1)) if m else {}
+    except (OSError, ValueError):
+        return {}
+
 ev = []
-gfx_ev = json.load(open('gfx/sfx_events.json'))
+gfx_ev = json.load(open('gfx/sfx_events.json', encoding='utf-8')) if os.path.exists('gfx/sfx_events.json') else {}
 for r in C['runs']:
     rid = f"{sk}_r{r['i']}"
-    for e in gfx_ev.get(rid, []): ev.append(dict(t=r['T0'] + e['t'], type=e['type']))
+    for e in gfx_ev.get(rid, []): ev.append(dict(t=r['T0'] + e['t'], type=e['type'], src=rid))
+    # a highlight swish on every highlight band drawn in (a scaleX reveal), the marker-pen sound the eye expects
+    if SH.get('auto_sfx', True):
+        for rv in gfx_cfg(rid).get('reveals', []):
+            if rv.get('type') == 'scaleX' and 0 <= rv['t'] < r['dur']: ev.append(dict(t=r['T0'] + rv['t'], type='highlight', src=rid))
 if os.path.exists(f'{sk}/events_extra.json'):
-    ev += json.load(open(f'{sk}/events_extra.json'))
-LEVEL = {'click': -10, 'pop': -10, 'chime': -10, 'whoosh': -9, 'key': -16, 'tick': -16}
-sfx = np.zeros(N); keyi = 0; wv = 0
-for e in sorted(ev, key=lambda e: e['t']):
-    g = vpeak * 10 ** (LEVEL[e['type']] / 20)
-    if e['type'] == 'whoosh':
+    ev += [dict(e, src='cta') for e in json.load(open(f'{sk}/events_extra.json', encoding='utf-8'))]
+if SH.get('auto_sfx', True) and SH.get('sting', True):
+    ev.append(dict(t=JOIN, type='sting', src='hook'))         # a minimal hit where the hook lands on the first point
+ev.sort(key=lambda e: e['t'])
+main_t = [e['t'] for e in ev if e['type'] not in ('highlight', 'key', 'tick')]
+ev = [e for e in ev if not (e['type'] == 'highlight' and any(abs(e['t'] - t) < 0.15 for t in main_t))]   # never stacked on another sound
+
+sfx = np.zeros((N, 2)); log = []; wv = 0; k = 0
+def add(s, i0, g, name, e):
+    s = np.asarray(s, np.float64)
+    if s.ndim == 1: s = np.stack([s, s], 1)
+    c0 = max(0, -i0); i0 = max(0, i0); m = min(len(s) - c0, N - i0)
+    if m > 0: sfx[i0:i0 + m] += g * s[c0:c0 + m]
+    log.append(dict(t=round(float(e['t']), 3), type=e['type'], sound=name, level_db=round(float(20 * np.log10(g / vpeak)), 1), src=e.get('src')))
+while k < len(ev):
+    e = ev[k]; typ = e['type']
+    lib_ok = USE_LIB and LIB.has(LIB_CAT.get(typ, typ), short=0.35 if typ in ('key', 'tick') else None)
+    g = vpeak * 10 ** ((LIB_LEVEL if lib_ok else LEVEL).get(typ, -14) / 20)
+    if typ in ('key', 'tick'):                       # a typing run -> real single key strokes, slightly varied in level
+        run = [e]
+        while k + 1 < len(ev) and ev[k + 1]['type'] in ('key', 'tick') and ev[k + 1]['t'] - run[-1]['t'] < 0.35:
+            k += 1; run.append(ev[k])
+        for j, r in enumerate(run):
+            kk, _, stem = LIB.get('typing', short=0.35) if lib_ok else (key(j), 0, 'synth_key')
+            add(kk, int(round(r['t'] * SR)), g * (0.8 + 0.2 * ((j * 7) % 3) / 2), stem, r)
+    elif lib_ok:                                     # a recorded sample; whooshes land their loudest moment on the whip midpoint
+        x, pk, stem = LIB.get(LIB_CAT.get(typ, typ))
+        add(x, int(round(e['t'] * SR)) - pk, g, stem, e)
+    elif typ == 'whoosh':
         s, mid = whoosh(wv); wv += 1
-        i0 = int(round(e['t'] * SR)) - mid          # loudest moment exactly on the whip midpoint
+        add(s, int(round(e['t'] * SR)) - mid, g, f'synth_whoosh_{wv % 4}', e)
+    elif typ in ('highlight', 'ding', 'sting'):      # no library: soft synthesized stand-ins
+        s, mid = (whoosh(wv) if typ == 'highlight' else (chime(), 0)); wv += 1
+        add(s, int(round(e['t'] * SR)) - mid, g * (0.5 if typ == 'highlight' else 1.0), f'synth_{typ}', e)
     else:
-        s = {'click': click, 'pop': pop, 'chime': chime}.get(e['type'], None)
-        s = s() if s else key(keyi); keyi += 1
-        i0 = int(round(e['t'] * SR))
-    i0c = max(0, i0); s = s[i0c - i0:]
-    m = min(len(s), N - i0c)
-    sfx[i0c:i0c + m] += g * s[:m]
-sfx2 = np.stack([sfx, sfx], 1)
+        s = {'click': click, 'pop': pop, 'chime': chime}.get(typ, pop)()
+        add(s, int(round(e['t'] * SR)), g, f'synth_{typ}', e)
+    k += 1
+json.dump(log, open(f'{sk}/sfx_log.json', 'w'), indent=1)
 
-# riser: audible end exactly on the hook -> first point join (end of run 0)
-join = C['runs'][0]['T1']
-rs = riser(2.6); i1 = int(round(join * SR)); i0 = i1 - len(rs)
-ris = np.zeros((N, 2)); a = max(0, i0)
-ris[a:i1, 0] = rs[a - i0:] * vpeak * 10 ** (-12 / 20); ris[:, 1] = ris[:, 0]
+# ---------------- riser: its loudest moment exactly on the hook join ----------------
+ris = np.zeros((N, 2))
+if USE_LIB and LIB.has('riser') and SH.get('riser_from_library', True):
+    x, pk, rstem = LIB.get('riser'); pk = pk or int(np.argmax(np.abs(x).mean(1)))
+    rs = x[:pk + int(0.012 * SR)].astype(np.float64)                     # cut right after its peak
+    rs[-int(0.012 * SR):] *= np.linspace(1, 0, int(0.012 * SR))[:, None]
+    rs *= vpeak * 10 ** (LIB_LEVEL['riser'] / 20)
+else:
+    rstem = 'synth_riser'; rs = np.repeat(riser(2.6)[:, None], 2, 1) * vpeak * 10 ** (-12 / 20)
+i1 = int(round(JOIN * SR)); i0 = i1 - len(rs); a = max(0, i0)
+ris[a:i1] = rs[a - i0:]
 
-# music bed: a styled, seeded track that fits this short (shorts.json -> "music"), beat drops on the hook join,
-# sidechain-ducked under the voice, ends exactly on END. Never the same track twice: the seed defaults to the title hash.
-import zlib
-sys.path.insert(0, 'scripts'); import music as MUS
-SH = json.load(open('shorts.json'))[sk]; mp = SH.get('music', {})
-KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
-key = mp.get('key'); key = KEYS.index(key) if isinstance(key, str) and key in KEYS else key
-seed = int(mp.get('seed', zlib.crc32((SH.get('title', '') + '|' + sk).encode()) % 1000003))
-mus, mparams = MUS.render(mp.get('style', 'lofi'), seed, END, drop=join, bpm=mp.get('bpm'), key=key, mood=mp.get('mood'))
-mus = mus.astype(np.float64)[:N]
-if len(mus) < N: mus = np.pad(mus, ((0, N - len(mus)), (0, 0)))
+# ---------------- music: the generated take (or a given file), else the synthesized bed ----------------
+mp = SH.get('music', {})
+pick = json.load(open(f'{sk}/music/pick.json', encoding='utf-8')) if os.path.exists(f'{sk}/music/pick.json') else None
+src = mp.get('file') or (pick['file'] if pick and os.path.exists(pick.get('file', '')) else None)
+if src:
+    x, sr = sf.read(src, dtype='float32', always_2d=True)
+    if sr != SR: x = signal.resample_poly(x, SR, sr, axis=0).astype(np.float32)
+    if x.shape[1] == 1: x = np.repeat(x, 2, 1)
+    off = int(float(mp.get('file_offset', 0.0)) * SR)             # a take from music_takes.py is already cut: its lift is on JOIN
+    mus = x[off:off + N, :2].astype(np.float64)
+    if len(mus) < N: mus = np.pad(mus, ((0, N - len(mus)), (0, 0)))
+    side = pick if (pick and src == pick.get('file')) else {}
+    mparams = dict(source='generated' if side else 'file', file=src, file_offset=float(mp.get('file_offset', 0.0)),
+                   style=side.get('style', mp.get('style', '-')), take=side.get('take'), seed=side.get('seed'),
+                   model=side.get('model'), prompt=side.get('prompt'), bpm=side.get('bpm'), licence=side.get('licence'),
+                   alternatives=side.get('alternatives'))
+    under = float(mp.get('under_voice_lu', 15))     # Leon's hook-music lesson: 18 LU under was barely there, 15 reads
+else:
+    sys.path.insert(0, 'scripts'); import music as MUS
+    KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+    key_ = mp.get('key'); key_ = KEYS.index(key_) if isinstance(key_, str) and key_ in KEYS else key_
+    seed = int(mp.get('seed', zlib.crc32((SH.get('title', '') + '|' + sk).encode()) % 1000003))
+    syn_style = mp.get('style') if mp.get('style') in MUS.STYLES else 'lofi'
+    mus, mparams = MUS.render(syn_style, seed, END, drop=JOIN, bpm=mp.get('bpm'), key=key_, mood=mp.get('mood'))
+    mus = mus.astype(np.float64)[:N]
+    if len(mus) < N: mus = np.pad(mus, ((0, N - len(mus)), (0, 0)))
+    mparams = dict(source='synthesized', **mparams)
+    under = float(mp.get('under_voice_lu', 17))     # the synthesized beds sat at -31 LUFS under a -14 LUFS voice
 fi = int(0.8 * SR); mus[:fi] *= np.linspace(0, 1, fi)[:, None]
 fo = int(1.2 * SR); mus[-fo:] *= np.linspace(1, 0, fo)[:, None] ** 1.5
-meter = pyln.Meter(SR)
-mus *= 10 ** ((-31 - meter.integrated_loudness(mus)) / 20)
+v_lufs = meter.integrated_loudness(voice)
+target = v_lufs - under
+mus *= 10 ** ((target - meter.integrated_loudness(mus)) / 20)
 venv = np.abs(voice.mean(1)); venv = signal.filtfilt(*signal.butter(1, 6 / (SR / 2)), venv)
 duck = 1 - 0.45 * np.clip(venv / (np.percentile(venv, 90) + 1e-9), 0, 1)
 mus *= duck[:, None]
+mparams.update(level_lufs=round(float(target), 1), under_voice_lu=under, riser=rstem, sfx_library=LIB.dir if USE_LIB else None)
 json.dump(mparams, open(f'{sk}/music.json', 'w'), indent=1)
-print('music:', mparams)
+print('music:', {k: v for k, v in mparams.items() if k not in ('prompt', 'alternatives')})
 
 os.makedirs(f'{sk}/stems', exist_ok=True)
-for nm, x in [('voice', voice), ('sfx', sfx2), ('riser', ris), ('music', mus)]:
+for nm, x in [('voice', voice), ('sfx', sfx), ('riser', ris), ('music', mus)]:
     sf.write(f'{sk}/stems/{nm}.wav', x[:N].astype(np.float32), SR, subtype='PCM_24')
-mix = voice + sfx2 + ris + mus
+mix = voice + sfx + ris + mus
 # true-peak limiter (spec: final mix <= -1 dBFS true peak). 4x oversampled peak detection, 1.5 ms look-ahead (minimum
 # filter), smoothed gain; touches only the few hot transients, so the integrated loudness stays ~-14 LUFS. (A plain
 # sample-peak rescale to 0.95 let a less-compressed voice through at -0.4 dBTP.)
@@ -165,4 +244,6 @@ for _ in range(3):
 tp = np.max(np.abs(np.stack([signal.resample_poly(mix[:, c], 4, 1) for c in range(mix.shape[1])], 1)))
 print(f'{sk}: true peak after limiter {20 * np.log10(tp):.2f} dBTP')
 sf.write(f'{sk}/mix.wav', mix.astype(np.float32), SR, subtype='PCM_24')
-print(f'{sk}: END={END:.3f}s N={N} events={len(ev)} voice_peak={20*np.log10(vpeak):.1f}dBFS mix_peak={20*np.log10(np.abs(mix).max()):.1f} mix_lufs={meter.integrated_loudness(mix):.1f} music_lufs={meter.integrated_loudness(mus+1e-9):.1f}')
+print(f"{sk}: END={END:.3f}s N={N} events={len(ev)} sounds={len(log)} ({'library ' + LIB.dir if USE_LIB else 'synthesized'}) "
+      f"voice_peak={20*np.log10(vpeak):.1f}dBFS mix_peak={20*np.log10(np.abs(mix).max()):.1f} mix_lufs={meter.integrated_loudness(mix):.1f} "
+      f"music_lufs={meter.integrated_loudness(mus+1e-9):.1f}")

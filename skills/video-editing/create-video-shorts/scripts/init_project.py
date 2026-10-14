@@ -13,7 +13,7 @@ proj = os.path.dirname(os.path.abspath(src))
 stem = os.path.splitext(os.path.basename(src))[0].lower()
 aud = [f for e in ('wav', 'm4a', 'mp3', 'flac', 'aac', 'aiff') for f in glob.glob(os.path.join(proj, f'*.{e}'))]
 aud.sort(key=lambda f: (stem not in os.path.basename(f).lower(), f))      # a file named like the video wins
-cfg = json.load(open('project.json')) if os.path.exists('project.json') else {}
+cfg = json.load(open('project.json', encoding='utf-8')) if os.path.exists('project.json') else {}
 cfg.update({
     'source': src.replace('\\', '/'),
     'source_size': [int(v['width']), int(v['height'])],

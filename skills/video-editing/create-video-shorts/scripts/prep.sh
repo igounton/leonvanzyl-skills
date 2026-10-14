@@ -1,10 +1,11 @@
 #!/bin/bash
 # Main-agent work after the cut, in one call, while the graphics subagents build their compositions:
 #   frame-exact camera clips for every camera run (all runs in parallel, NVDEC)
-#   -> the matte for every split run of every short in ONE GPU call
+#   -> the matte for every split run of every short in ONE GPU call (RVM; u2net if the model is missing)
 #   -> captions.json + events_extra.json per short (so audio.py can run)
 #   -> one full-resolution frame of the cover and of every split run (if its graphic is already rendered) -> chk/<sk>_splits.png
 #   bash scripts/prep.sh s1 [s2 ...]
+export PYTHONUTF8=1   # Python reads/writes UTF-8 on Windows too (cp1252 garbled non-ASCII names in captions)
 set -u
 cd "$(dirname "$0")/.."
 PY=../.venv/Scripts/python.exe; [ -f "$PY" ] || PY=../.venv/bin/python
@@ -25,7 +26,13 @@ EOF
 )
 if [ -n "$SPLITS" ]; then
   since "matting split runs: $SPLITS"
-  "$PY" scripts/matte_gpu.py $SPLITS --jobs 4 2>&1 | tee logs/matte.log | grep -E "matte on|frames|all "
+  # Robust Video Matting first (hair strands, no guitar/lamp grabbed with the head); u2net (matte_gpu.py) as the fallback
+  if "$PY" -c "import sys; sys.path.insert(0, 'scripts'); import matte_rvm; sys.exit(0 if matte_rvm.available() else 1)" 2>/dev/null; then
+    "$PY" scripts/matte_rvm.py $SPLITS --jobs 4 2>&1 | tee logs/matte.log | grep -E "matte on|frames|all |Error|error"
+  else
+    echo "RVM model or CUDA missing (setup.sh downloads the model): falling back to u2net"
+    "$PY" scripts/matte_gpu.py $SPLITS --jobs 4 2>&1 | tee logs/matte.log | grep -E "matte on|frames|all "
+  fi
 fi
 for sk in $SKS; do "$PY" scripts/compose.py $sk --events-only 2>&1 | tail -1; done
 # one full-resolution frame per split run (needs that run's graphic) + the cover frame

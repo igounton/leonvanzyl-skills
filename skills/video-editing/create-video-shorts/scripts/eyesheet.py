@@ -45,7 +45,7 @@ if '--window' in sys.argv:
     S.save(f'eyes_{a}.png'); print(f'eyes_{a}.png'); sys.exit()
 
 sk = sys.argv[1]
-Cc = json.load(open('cut.json'))[sk]; S_ = json.load(open('shorts.json'))[sk]
+Cc = json.load(open('cut.json', encoding='utf-8'))[sk]; S_ = json.load(open('shorts.json', encoding='utf-8'))[sk]
 plan = []
 for L in S_['lines']:
     ps = [p for p in Cc['pieces'] if p['line'] == L['id']]

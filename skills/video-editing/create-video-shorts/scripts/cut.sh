@@ -2,6 +2,7 @@
 # Stage 3 in one call: forced alignment -> the cut -> the proof (voice re-transcription + eye sheets), in parallel.
 #   bash scripts/cut.sh s1 [s2 ...]        (shorts to verify; all in shorts.json if none given)
 # Iterate freely: align_lines.py only re-transcribes, cut2.py takes seconds.
+export PYTHONUTF8=1   # Python reads/writes UTF-8 on Windows too (cp1252 garbled non-ASCII names in captions)
 set -u
 cd "$(dirname "$0")/.."
 PY=../.venv/Scripts/python.exe; [ -f "$PY" ] || PY=../.venv/bin/python

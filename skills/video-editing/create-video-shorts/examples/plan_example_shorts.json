@@ -1,7 +1,6 @@
 {
  "s1": {
   "title": "Half the price of Opus?",
-  "cta_keyword": "PROMPT",
   "lines": [
    {
     "id": "L1",
@@ -114,13 +113,11 @@
    "free community"
   ],
   "music": {
-   "style": "lofi",
-   "mood": "moody"
+   "style": "cinematic"
   }
  },
  "s2": {
   "title": "Which AI built the best game?",
-  "cta_keyword": "GAMES",
   "lines": [
    {
     "id": "L1",
@@ -219,13 +216,11 @@
    }
   ],
   "music": {
-   "style": "chillhop",
-   "mood": "warm"
+   "style": "indie"
   }
  },
  "s3": {
   "title": "Get more out of Sonnet 5.5",
-  "cta_keyword": "LABS",
   "lines": [
    {
     "id": "L1",
@@ -286,8 +281,7 @@
    }
   ],
   "music": {
-   "style": "lofi",
-   "mood": "warm"
+   "style": "electro_pop"
   }
  }
 }

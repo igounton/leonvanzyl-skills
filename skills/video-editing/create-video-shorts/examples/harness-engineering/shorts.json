@@ -1,0 +1,438 @@
+{
+ "s1": {
+  "title": "Same model, 10x the score",
+  "cover": [
+   "Same model,",
+   "10x the score"
+  ],
+  "highlights": [
+   "Grok Code Fast 1",
+   "almost 70%",
+   "same model",
+   "LangChain",
+   "same prompt",
+   "66%",
+   "Can Bölük",
+   "bottleneck"
+  ],
+  "music": {
+   "style": "cinematic",
+   "file": "C:/Users/leon/Videos/Skool/YouTube/Media/Harness Engineering/shorts/work-The 3 Levels of Harness Engineering (Beginner to Pro)/music_lib/cand_3.wav",
+   "file_offset": 1.31,
+   "note": "Leon rejected s1's generated take 2 ('terrible'); the long-form hook track he picked (cand_3, ACE-Step 1.5 XL seed 3307), its lift moved onto the hook join"
+  },
+  "lines": [
+   {
+    "id": "L1",
+    "a": 572.68,
+    "b": 581.74,
+    "layout": "split",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 576.825,
+      "layout": "fc"
+     }
+    ],
+    "text": "He managed to push Grok Code Fast 1 from only 6.7% all the way to almost 70%, simply by changing how the underlying tools work."
+   },
+   {
+    "id": "L2",
+    "a": 526.38,
+    "b": 533.42,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "I've seen a few very cool examples where only changing the harness actually took the same model and improved its outputs."
+   },
+   {
+    "id": "L3",
+    "a": 534.06,
+    "b": 538.86,
+    "layout": "split",
+    "cam": "pip",
+    "text": "Like, for example, LangChain did this experiment a while back where they took GPT-5.2,"
+   },
+   {
+    "id": "L4",
+    "a": 539.32,
+    "b": 550.68,
+    "layout": "fc",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 542.85,
+      "layout": "fv"
+     },
+     {
+      "t": 546.554,
+      "layout": "fc"
+     }
+    ],
+    "text": "and it's exact same model with the same prompt, and they actually managed to get better results out of the model by using their own deep agent CLI tool, their own coding agent harness."
+   },
+   {
+    "id": "L5",
+    "a": 551.88,
+    "b": 555.7,
+    "layout": "split",
+    "cam": "pip",
+    "text": "They were able to get the output from a 53% roundabout to about 66%."
+   },
+   {
+    "id": "L6",
+    "a": 557.95,
+    "b": 562.5,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "Then there's this really popular post on X from Can Bölük, sorry if I'm butchering your name,"
+   },
+   {
+    "id": "L7",
+    "a": 568.22,
+    "b": 571.6,
+    "layout": "fc",
+    "cam": "pip",
+    "cta": true,
+    "text": "The coding harness, as he says here, was the bottleneck."
+   }
+  ]
+ },
+ "s2": {
+  "title": "Claude Code eats 30,000 tokens before you type",
+  "cover": [
+   "30,000 tokens",
+   "before you type"
+  ],
+  "highlights": [
+   "30,000 tokens",
+   "very tiny",
+   "32,000 tokens",
+   "harness stuff",
+   "SMOL Coder",
+   "MCP tools",
+   "1,400 tokens"
+  ],
+  "music": {
+   "style": "electro_pop"
+  },
+  "lines": [
+   {
+    "id": "L1",
+    "a": 726.67,
+    "b": 733.43,
+    "layout": "split",
+    "cam": "pip",
+    "text": "Before I've sent a single message to Claude, it's already taking up over 30,000 tokens of my context window."
+   },
+   {
+    "id": "L2",
+    "a": 629.66,
+    "b": 635.84,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "Typically, your local models have a very tiny context window, especially on consumer grade hardware."
+   },
+   {
+    "id": "L3",
+    "a": 636.76,
+    "b": 652.08,
+    "layout": "split",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 642.931,
+      "layout": "fv"
+     },
+     {
+      "t": 648.856,
+      "layout": "fc"
+     }
+    ],
+    "text": "If your entire context window is only like 32,000 tokens or 64,000 tokens, you cannot afford to inject Claude Code's 30,000 tokens, which is just purely harness stuff, into the context window."
+   },
+   {
+    "id": "L4",
+    "a": 653.0,
+    "b": 659.98,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "So I decided to create this SMOL Coder harness, which strips away anything an open weight model will never need."
+   },
+   {
+    "id": "L5",
+    "a": 660.62,
+    "b": 668.4,
+    "layout": "split",
+    "cam": "pip",
+    "text": "Open-weight models that run on your own hardware will never need to run things like MCP tools or sub-agents."
+   },
+   {
+    "id": "L6",
+    "a": 714.75,
+    "b": 720.87,
+    "layout": "fc",
+    "cam": "pip",
+    "cta": true,
+    "text": "All the tool definitions, the system prompt, everything this model needs only takes 1,400 tokens."
+   }
+  ]
+ },
+ "s3": {
+  "title": "What an AI agent actually is",
+  "cover": [
+   "What is an",
+   "AI agent, really?"
+  ],
+  "highlights": [
+   "agent",
+   "the model",
+   "harness",
+   "Opus",
+   "brain",
+   "environment",
+   "rules",
+   "checks",
+   "model plus the harness"
+  ],
+  "music": {
+   "style": "cinematic"
+  },
+  "lines": [
+   {
+    "id": "L1",
+    "a": 84.62,
+    "b": 88.98,
+    "layout": "split",
+    "cam": "pip",
+    "text": "You've probably heard the word agent so many times. But what exactly is an agent?"
+   },
+   {
+    "id": "L2",
+    "a": 89.58,
+    "b": 95.36,
+    "layout": "fc",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 92.855,
+      "layout": "split"
+     }
+    ],
+    "text": "Well, an agent is actually the model, like your large language model, and your harness."
+   },
+   {
+    "id": "L3",
+    "a": 96.7,
+    "b": 105.92,
+    "layout": "fv",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 102.181,
+      "layout": "split"
+     }
+    ],
+    "text": "The model would be your large language model, like Opus, Fable, GPT-6. Those are the actual models which basically form the brain of the operation."
+   },
+   {
+    "id": "L4",
+    "a": 106.94,
+    "b": 111.08,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "The harness is the environment in which that LLM functions."
+   },
+   {
+    "id": "L5",
+    "a": 112.26,
+    "b": 119.84,
+    "layout": "fc",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 117.402,
+      "layout": "fv"
+     }
+    ],
+    "text": "The harness is the thing that allocates the rules that the agent needs to follow. It assigns the tools that the agent should have access to,"
+   },
+   {
+    "id": "L6",
+    "a": 127.91,
+    "b": 134.47,
+    "layout": "split",
+    "cam": "pip",
+    "text": "The harness also enforces the checks that need to be executed, like running test suites, lint, type check."
+   },
+   {
+    "id": "L7",
+    "a": 208.29,
+    "b": 211.69,
+    "layout": "fc",
+    "cam": "pip",
+    "cta": true,
+    "text": "So very simply put, an agent is the model plus the harness."
+   }
+  ]
+ },
+ "s4": {
+  "title": "How a software factory runs 20 AI agents",
+  "cover": [
+   "20 AI agents,",
+   "one factory"
+  ],
+  "highlights": [
+   "agent swarm",
+   "10 or 20",
+   "Codex",
+   "Claude Code",
+   "waiting for work",
+   "allocate",
+   "busy",
+   "next task"
+  ],
+  "music": {
+   "style": "cinematic"
+  },
+  "lines": [
+   {
+    "id": "L1",
+    "a": 841.67,
+    "b": 844.45,
+    "layout": "split",
+    "cam": "pip",
+    "text": "A software factory is basically where you've got this agent swarm."
+   },
+   {
+    "id": "L2",
+    "a": 845.37,
+    "b": 858.25,
+    "layout": "fc",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 848.768,
+      "layout": "fv"
+     },
+     {
+      "t": 852.472,
+      "layout": "split"
+     }
+    ],
+    "text": "So you'd have maybe 10 or 20 coding agents all sitting in the background. And these agents could be a mix of agents. You might have Codex agents, you could have Claude Code agents, maybe even your own coding harness."
+   },
+   {
+    "id": "L3",
+    "a": 859.5,
+    "b": 871.9,
+    "layout": "fv",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 867.674,
+      "layout": "split"
+     }
+    ],
+    "text": "These agents are just kind of waiting for work. And what the software factory will do is whenever you need to make a change to any of your projects, the software factory will allocate that task to one of your available coding agents."
+   },
+   {
+    "id": "L4",
+    "a": 872.9,
+    "b": 882.2,
+    "layout": "fv",
+    "cam": "pip",
+    "cta": true,
+    "switches": [
+     {
+      "t": 875.688,
+      "layout": "fc"
+     }
+    ],
+    "text": "If all of the agents in your swarm are busy, the software factory will deal with it. It will actually wait until an agent becomes available before allocating the next task."
+   }
+  ]
+ },
+ "s5": {
+  "title": "My AI agent swarm in 3D",
+  "cover": [
+   "My AI agent swarm",
+   "in 3D"
+  ],
+  "highlights": [
+   "boring",
+   "3D space",
+   "coding harness",
+   "Claude Opus",
+   "Kanban board",
+   "GitHub issues",
+   "pull request",
+   "verified"
+  ],
+  "music": {
+   "style": "indie"
+  },
+  "lines": [
+   {
+    "id": "L1",
+    "a": 889.96,
+    "b": 892.06,
+    "layout": "split",
+    "cam": "pip",
+    "text": "No one said an agent harness should be boring."
+   },
+   {
+    "id": "L2",
+    "a": 892.68,
+    "b": 900.54,
+    "layout": "fv",
+    "cam": "pip",
+    "text": "This is my coding agent swarm represented in 3D space. And these guys are working on an actual project."
+   },
+   {
+    "id": "L3",
+    "a": 901.52,
+    "b": 903.88,
+    "layout": "split",
+    "cam": "pip",
+    "text": "Each of these agents are running a coding harness."
+   },
+   {
+    "id": "L4",
+    "a": 904.6,
+    "b": 918.76,
+    "layout": "fv",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 913.894,
+      "layout": "fc"
+     }
+    ],
+    "text": "So this could be Claude Code, it could be Codex. If I run to any of these monitors, I can actually see like this guy is actually running Claude Opus. So this is using Claude Code. And some of them are using other coding harnesses as well."
+   },
+   {
+    "id": "L5",
+    "a": 922.14,
+    "b": 934.65,
+    "layout": "fv",
+    "cam": "pip",
+    "switches": [
+     {
+      "t": 929.166,
+      "layout": "split"
+     }
+    ],
+    "text": "And this also uses the Kanban board. And these are hooked up to actual GitHub issues. So when I click on any of these, we can actually jump to the actual pull request sitting on GitHub."
+   },
+   {
+    "id": "L6",
+    "a": 942.01,
+    "b": 948.35,
+    "layout": "fc",
+    "cam": "pip",
+    "cta": true,
+    "text": "And these agents will keep working away in the background until everything was built, tested, and verified."
+   }
+  ]
+ }
+}

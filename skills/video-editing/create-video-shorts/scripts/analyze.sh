@@ -3,6 +3,7 @@
 # exists (ingest.py writes ingest_audio.done when the audio is ready and ingest.done when the proxy is). Run inside W:
 #   bash scripts/analyze.sh
 # Logs go to logs/<step>.log; the summary the plan needs is printed at the end. Then LOOK at detect_camera.png.
+export PYTHONUTF8=1   # Python reads/writes UTF-8 on Windows too (cp1252 garbled non-ASCII names in captions)
 set -u
 cd "$(dirname "$0")/.."
 PY=../.venv/Scripts/python.exe; [ -f "$PY" ] || PY=../.venv/bin/python

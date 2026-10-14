@@ -4,7 +4,7 @@ voice wherever it is clean; the stem is patched in only where something sits und
 export may have small trims vs the stem's timeline), EQ-matched (linear-phase FIR), compression-matched (static curve) and
 level-matched to the export, so patched and unpatched lines sound the same. Run after analyze.sh, before cut.sh.
 
-project.json -> "clean_stem": {"voice": "<path to the stem wav>",
+project.json -> "clean_stem": {"voice": "<path to the stem wav>", "fit_exclude": [[t0, t1], ...] (hook music etc., when everything is patched),
                                "sync": [[t0, t1, offset_s], ...],      # written by --scan (export time -> stem time = t + offset)
                                "patches": [[t0, t1, "why"], ...]}      # export-time windows to replace; boundaries in quiet gaps
 usage:
@@ -106,6 +106,14 @@ fit_ix = []
 for t0, t1, o in SYNC:
     for t in np.arange(t0 + 1, t1 - 1, 1.0):
         if not any(a - 1 <= t <= b + 1 for a, b, *_ in PATCH): fit_ix.append((t, o))
+if not fit_ix:
+    # the whole edit is patched (SFX under the voice everywhere): fit on every synced second instead, minus the
+    # project.json clean_stem.fit_exclude windows (the hook music, risers); the medians shrug off sparse SFX
+    EXC = cfg.get('fit_exclude', [])
+    for t0, t1, o in SYNC:
+        for t in np.arange(t0 + 1, t1 - 1, 1.0):
+            if not any(a - 1 <= t <= b + 1 for a, b, *_ in EXC): fit_ix.append((t, o))
+    print(f'fit on all synced audio outside fit_exclude {EXC} ({len(fit_ix)} s): the patches cover everything')
 fit_ix = fit_ix[::max(1, len(fit_ix) // 400)]
 ex = np.concatenate([xm[int(t * SR):int((t + 1) * SR)] for t, o in fit_ix])
 cl = np.concatenate([vm[int((t + o) * SR):int((t + o + 1) * SR)] for t, o in fit_ix])
@@ -170,7 +178,8 @@ if '--build' in sys.argv:
             a_, b_ = max(t0, s0), min(t1, s1)
             if b_ <= a_: continue
             k0, k1 = int(a_ * SR), int(b_ * SR); jj = k0 + int(round(o * SR))
-            piece[k0 - i0:k1 - i0] = vq[jj:jj + (k1 - k0)]; used.append(o)
+            skip = max(0, -jj); src = vq[jj + skip:jj + (k1 - k0)]         # clamp at the stem's ends (the offset can run past them)
+            piece[k0 - i0 + skip:k0 - i0 + skip + len(src)] = src; used.append(o)
         if not used: print(f'patch {t0}-{t1}: no sync piece covers it - skipped'); continue
         # per-patch level: median of (export - stem) on loud speech frames (a riser or pops touch only a few of them)
         re_p, rc_p = r_db(xm[i0:i1], SR // 10), r_db(piece.mean(1), SR // 10); spm = (re_p > -30) & (rc_p > -50)

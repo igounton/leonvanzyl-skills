@@ -9,7 +9,7 @@ def _wm():
 import sys as _s; _s.path.insert(0, 'scripts'); import config as _C
 import scipy.signal as ss
 wm=_wm()
-C=json.load(open('cut.json'))
+C=json.load(open('cut.json', encoding='utf-8'))
 for sk in (_s.argv[1:] or list(C.keys())):
     x,sr=sf.read(f'{sk}/voice.wav'); m=x.mean(1)
     hop=480; n=len(m)//hop; db=20*np.log10(np.sqrt((m[:n*hop].reshape(n,hop)**2).mean(1))+1e-9)

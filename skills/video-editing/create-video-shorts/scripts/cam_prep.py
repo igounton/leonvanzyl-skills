@@ -75,7 +75,7 @@ def extract(sk, CUT, lines, r):
 
 jobs = []
 for sk in shorts:
-    CUT = json.load(open('cut.json'))[sk]; S = json.load(open('shorts.json'))[sk]; lines = {L['id']: L for L in S['lines']}
+    CUT = json.load(open('cut.json', encoding='utf-8'))[sk]; S = json.load(open('shorts.json', encoding='utf-8'))[sk]; lines = {L['id']: L for L in S['lines']}
     os.makedirs(f'{sk}/cam', exist_ok=True)
     for r in CUT['runs']:
         if r['layout'] not in ('fc', 'split') or (only is not None and r['i'] not in only): continue
@@ -83,7 +83,7 @@ for sk in shorts:
 t_all = time.time()
 with ThreadPoolExecutor(max(1, min(JOBS, len(jobs)))) as ex: results = list(ex.map(lambda j: extract(*j), jobs))
 for sk in shorts:
-    planf = f'{sk}/cam/plan.json'; plan = json.load(open(planf)) if os.path.exists(planf) else {}
+    planf = f'{sk}/cam/plan.json'; plan = json.load(open(planf, encoding='utf-8')) if os.path.exists(planf) else {}
     for s_, ri, entry in results:
         if s_ == sk: plan[ri] = entry
     json.dump(plan, open(planf, 'w'), indent=1)

@@ -1,4 +1,4 @@
-"""GPU background-removal matte for split runs (replacement for `hyperframes remove-background` when its onnxruntime-node
+"""FALLBACK matte for split runs when Robust Video Matting (matte_rvm.py) is unavailable. GPU background-removal matte for split runs (replacement for `hyperframes remove-background` when its onnxruntime-node
 build has no CUDA). Runs the SAME model HyperFrames caches (u2net_human_seg.onnx) on onnxruntime-gpu, frame by frame from
 the frame-exact camera clip, so the matte stays frame-locked with the card.
 Output: <sk>/cam/r<i>_matte.mov, RGBA (rgb = the clip frame, alpha = the matte), same size and frame count as the clip.
@@ -72,6 +72,13 @@ def matte_fallback(sk, i):
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-c:v', 'libx264', '-crf', '8', '-pix_fmt', 'yuv444p', mp4], check=True)
     subprocess.run(f'npx --yes hyperframes remove-background {mp4} -o {out}', shell=True, check=True)   # also caches the model for next time
     print(f'{sk} r{i}: CPU fallback -> {out}')
+    mark(sk, i, 'u2net (hyperframes remove-background, CPU)')
+
+
+def mark(sk, i, model):
+    """the matte's model, for compose.py: a u2net matte gets eroded 1 px (its dark rim), an RVM one doesn't"""
+    import json
+    json.dump(dict(model=model), open(f'{sk}/cam/r{i}_matte.json', 'w'))
 
 
 def matte(sk, i, threads):
@@ -90,6 +97,7 @@ def matte(sk, i, threads):
                 enc.stdin.write(pending.popleft().result()); k += 1
         while pending: enc.stdin.write(pending.popleft().result()); k += 1
     enc.stdin.close(); enc.wait(); dec.wait()
+    mark(sk, i, 'u2net')
     print(f'{sk} r{i}: {k} frames {w}x{h} in {time.time() - t0:.1f}s -> {out}', flush=True)
 
 

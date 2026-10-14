@@ -12,7 +12,7 @@ MENU_JS = """window.CFG_RENDER=function(t){const m=CFG.menu;const el=document.ge
   let o=y==null?0:Math.min(1,(t-m.t[0][0])/0.25); if(t>m.hide) o*=Math.max(0,1-(t-m.hide)/0.3);
   el.style.opacity=o; if(yy!=null) el.style.top=(yy-32)+'px';};"""
 MENU_ROWS = {'opus': 752, 'fable': 828, 'sonnet': 906, 'haiku': 984}
-MENU_HL = '<div id="menuhl" style="position:absolute;left:1102px;width:392px;height:64px;border-radius:12px;background:rgba(217,119,87,.28);border:3px solid #D97757;opacity:0"></div>'
+MENU_HL = '<div id="menuhl" style="position:absolute;left:1102px;width:392px;height:64px;border-radius:12px;background:rgba(47,149,255,.24);border:3px solid #2F95FF;box-shadow:0 0 18px rgba(47,149,255,.45);opacity:0"></div>'
 
 
 def build():
@@ -31,7 +31,7 @@ def build():
     moves = [dict(t=t_b, dur=0.5, kind='step', to=dict(x=540, y=land_y, s=1.0)),
              dict(t=t_b + 0.55, dur=t_ag - t_b - 0.6, kind='glide', to=dict(x=540, y=land_y - 8, s=1.03)),
              dict(t=t_ag, dur=1.6, kind='push', to=dict(x=540 - bw / 2 + sx * 960, y=by0 + sx * 163 - 120 / 1.55, s=1.55))]
-    extra_css = '.band{background:#FBEEE8;transform-origin:0 50%;border-radius:8px;transform:scaleX(0)}'
+    extra_css = ''                      # .band (the azure wash) comes with the theme CSS
     cfg = dict(id='s1_r0', dur=r['dur'], mode='split', cam0=dict(x=540, y=470, s=1.0), cards=cards, moves=moves, pushRef=1.03,
                heroes=[dict(t=0, id='logo'), dict(t=t_b + 0.1, id='bench')],
                reveals=[dict(el='hlb2', t=W(ws, 'agentic') - 0.1, dur=0.5, type='scaleX')], sfx=[],
