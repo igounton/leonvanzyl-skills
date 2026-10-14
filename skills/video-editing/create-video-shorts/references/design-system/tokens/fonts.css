@@ -1,0 +1,4 @@
+/* Figtree (a free stand-in for the geometric sans of the keynote reference) and
+   Geist Mono, both from Google Fonts. To use licensed fonts, replace this @import
+   with local @font-face rules pointing at assets/fonts/. */
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");

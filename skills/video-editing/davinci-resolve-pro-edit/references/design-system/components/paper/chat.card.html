@@ -1,0 +1,27 @@
+<!-- @dsCard group="Components" viewport="1000x460" name="Chat & status" subtitle="ChatBubble in a ProductWindow; a status list ending each row in a Pill" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-900);color:var(--text);font-family:var(--font-sans);overflow:hidden}
+.frame{width:1000px;height:460px;overflow:hidden}.scale{width:1500px;height:690px;transform:scale(0.6667);transform-origin:0 0;padding:48px;box-sizing:border-box}
+.rule{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 0;border-bottom:1px solid var(--paper-line);font-size:24px;font-weight:500;color:var(--ink)}
+.rule:last-child{border-bottom:0;padding-bottom:0}</style>
+</head><body><div class="frame"><div class="scale ly-accent-azure" id="root"></div></div>
+<script>
+const { ProductWindow, ChatBubble, Pill } = window.LeonYouTube_792a19;
+const h = React.createElement;
+const rule = (text, tone, label) => h("div", { className: "rule" }, h("span", null, text), h(Pill, { tone: tone }, label));
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h("div", { style: { display: "flex", gap: 44, alignItems: "flex-start" } },
+    h(ProductWindow, { tabs: ["Chat", "Computer", "Activity"], active: "Chat", badge: "gpt-6 astra", style: { width: 660 } },
+      h(ChatBubble, { name: "Iggy · your dot" }, "You haven’t invoiced the September piece yet. I’ve drafted it from your last three invoices."),
+      h(ChatBubble, { from: "you" }, "Looks right. Send it.")),
+    h(ProductWindow, { tabs: ["Custom Rules", "Activity"], active: 0, badge: "auto-review on", style: { width: 700 } },
+      rule("Draft replies in Slack", "mint", "Allow"),
+      rule("Send invoices to clients", "ember", "Ask first"),
+      rule("Share files externally", "ember", "Ask first"),
+      rule("Delete calendar events", "neutral", "Block"))));
+</script>
+</body></html>

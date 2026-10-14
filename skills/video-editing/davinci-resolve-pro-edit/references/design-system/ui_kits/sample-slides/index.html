@@ -1,0 +1,167 @@
+<!-- @dsCard group="Slides" viewport="1920x1080" name="Sample slides" subtitle="Five 1920×1080 slides built from the components: click or use the arrow keys" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><title>Leon YouTube: sample slides</title><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;color:var(--text);font-family:var(--font-sans)}
+#root{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+.row{display:grid;grid-template-columns:92px 148px minmax(0,1fr);align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid var(--paper-line)}
+.row:last-child{border-bottom:0}
+.key{font-family:var(--font-mono);font-size:18px;color:var(--ink)}
+.top{display:flex;align-items:baseline;justify-content:space-between;font-size:22px;font-weight:600;color:var(--ink)}
+.meta{font-family:var(--font-mono);font-size:16px;font-weight:400;color:var(--ink-2)}
+.bar{margin-top:9px;height:10px;border-radius:999px;background:#EFF0F2}
+.fill{height:10px;border-radius:999px;background:var(--slide-accent)}
+.rubric{position:relative;height:10px;margin:13px 10px 0;border-radius:999px;background:#EFF0F2}
+.tick{position:absolute;top:-4px;width:3px;height:18px;background:#D5D7DB}
+.mark{position:absolute;top:-7px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--slide-accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25)}
+.scale-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:15px;color:var(--ink-2)}
+</style>
+</head><body><div id="root"></div>
+<script>
+const { Stage, SlideTitle, IconTile, CodePanel, GlassPanel, MonoLabel, Track, Stat, ProductWindow, Pill, TaskCard, BarRow, DataTable } = window.LeonYouTube_792a19;
+const h = React.createElement;
+
+function Hero() {
+  const lines = [
+    "POST /v1/systemone",
+    "{",
+    '  "model": "jev-latest",',
+    '  "state": "Help! My payouts have',
+    { text: '    been failing for 3 days.",', wrap: true },
+    '  "questions": {',
+    '    "is_urgent": {',
+    '      "type": "noul",',
+    '      "instructions": "Does this',
+    { text: '        convey urgency?"', wrap: true },
+    "    }",
+    "  }",
+    "}"
+  ];
+  return h(Stage, { accent: "azure" },
+    h("div", { style: { display: "flex", alignItems: "center", gap: "var(--gap-xl)", height: "100%" } },
+      h(SlideTitle, { size: "display", eyebrow: "TypeSafe · Jev", title: "System One", subtitle: "Typed answers in milliseconds", style: { width: 760, flexShrink: 0 } },
+        h("div", { style: { position: "relative", height: 150, marginBottom: 30 } },
+          h(IconTile, { color: "azure", glyph: "code", size: 116, tilt: -10, float: true, style: { position: "absolute", left: 0, top: 26 } }),
+          h(IconTile, { color: "iris", glyph: "eyes", size: 100, tilt: 9, float: true, style: { position: "absolute", left: 150, top: 0, animationDelay: "-3s" } }))),
+      h(CodePanel, { lines: lines, cursor: true, style: { width: 616, flexShrink: 0 } })));
+}
+
+function Compare() {
+  const statement = { fontSize: "var(--type-title)", fontWeight: 600, lineHeight: 1.1, letterSpacing: "var(--track-title)" };
+  return h(Stage, { accent: "azure" },
+    h("div", { style: { display: "flex", flexDirection: "column", height: "100%" } },
+      h(SlideTitle, { title: "System 1 and System 2", subtitle: "Borrowed from Kahneman’s Thinking, Fast and Slow" }),
+      h("div", { style: { marginTop: 64, flexGrow: 1, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--gap-lg)" } },
+        h(GlassPanel, { style: { display: "flex", flexDirection: "column", gap: 36 } },
+          h(MonoLabel, null, "System 2 · frontier LLMs"),
+          h("div", { style: Object.assign({}, statement, { color: "var(--text-secondary)" }) }, "Slow and deliberate. Writes text."),
+          h(Track, null),
+          h(Stat, { value: "3–329 s", label: "End-to-end latency", tone: "secondary", style: { marginTop: "auto" } })),
+        h(GlassPanel, { highlight: true, style: { position: "relative", display: "flex", flexDirection: "column", gap: 36 } },
+          h(IconTile, { color: "iris", glyph: "eyes", size: 96, tilt: 12, float: true, style: { position: "absolute", right: 28, top: -52 } }),
+          h(MonoLabel, { tone: "accent" }, "System 1 · Jev"),
+          h("div", { style: statement }, "Fast and intuitive. Returns typed decisions."),
+          h(Track, { highlight: true }),
+          h(Stat, { value: "70–500 ms", label: "End-to-end latency · vendor figures", tone: "accent", style: { marginTop: "auto" } })))));
+}
+
+function answerRow(pill, key, value, meta, viz) {
+  return h("div", { className: "row" },
+    h(Pill, { style: { justifySelf: "start" } }, pill),
+    h("span", { className: "key" }, key),
+    h("div", null, h("div", { className: "top" }, h("span", null, value), h("span", { className: "meta" }, meta)), viz));
+}
+
+function Types() {
+  const bar = (pct) => h("div", { className: "bar" }, h("div", { className: "fill", style: { width: pct + "%" } }));
+  const rubric = h("div", null,
+    h("div", { className: "rubric" },
+      h("div", { className: "tick", style: { left: 0 } }),
+      h("div", { className: "tick", style: { left: "50%" } }),
+      h("div", { className: "tick", style: { right: 0 } }),
+      h("div", { className: "mark", style: { left: "52.5%" } })),
+    h("div", { className: "scale-labels" }, h("span", null, "calm"), h("span", null, "frustrated"), h("span", null, "very angry")));
+  return h(Stage, { accent: "ember" },
+    h("div", { style: { display: "flex", alignItems: "center", gap: 60, height: "100%" } },
+      h("div", { style: { position: "relative", width: 700, flexShrink: 0 } },
+        h(SlideTitle, { size: "split", title: "Three\nquestion types", subtitle: "Answered in parallel from one state" }),
+        h(IconTile, { color: "ember", glyph: "bars", size: 96, tilt: 10, float: true, style: { position: "absolute", left: 304, top: 0 } })),
+      h("div", { style: { position: "relative", width: 680, flexShrink: 0 } },
+        h(ProductWindow, { tabs: ["Request", "Answers", "Usage"], active: "Answers", badge: "jev-latest", style: { width: 680 } },
+          h(MonoLabel, { size: 14, style: { color: "var(--ink-2)" } }, "State"),
+          h("div", { style: { margin: "10px 0 6px", padding: "16px 20px", borderRadius: "var(--radius-chip)", background: "var(--paper-2)", fontSize: 21, lineHeight: 1.4, color: "var(--ink)" } }, "“Help! My payouts have been failing for 3 days.”"),
+          answerRow("Choice", "department", "billing", "p 0.88 · conf 0.81", bar(88)),
+          answerRow("Score", "frustration", "1.05", "conf 0.92", rubric),
+          answerRow("Noul", "is_urgent", "yes", "p 0.95", bar(95)),
+          h("div", { style: { height: 96 }, "aria-hidden": true })),
+        h(TaskCard, { color: "ember", glyph: "arrow", title: "Route to billing", description: "Confidence 0.81 lets your code act or escalate", float: true, style: { position: "absolute", left: -170, bottom: -74, animationDelay: "-2s" } }))));
+}
+
+function Pricing() {
+  return h(Stage, { accent: "azure", waveIntensity: 0.6 },
+    h("div", { style: { display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" } },
+      h(SlideTitle, { title: "What a million calls cost", subtitle: "500 tokens in and 50 out per call" }),
+      h(GlassPanel, { padding: 36, style: { marginTop: 48 } },
+        h(DataTable, {
+          columns: ["Model", "Input / 1M tokens", "Output / 1M tokens", "1M calls"],
+          highlightColumn: 3,
+          rows: [
+            { cells: ["jev", "$0.042", "Free", "$21"], tone: "accent" },
+            ["sonnet 5", "$2", "$10", "$1,500"],
+            ["gpt-6 sol", "$2", "$10", "$1,500"],
+            ["opus 5.5", "$4", "$20", "$3,000"],
+            ["gpt-6 astra", "$10", "$50", "$7,500"],
+            ["fable 5.1", "$10", "$50", "$7,500"]
+          ]
+        }),
+        h("p", { style: { margin: "28px 0 0", fontSize: "var(--type-caption)", color: "var(--text-muted)" } }, "Standard list prices, September 2026. Excludes reasoning tokens, caching and batch discounts."))));
+}
+
+function Cost() {
+  const cols = { gridTemplateColumns: "190px minmax(0, 1fr) 130px" };
+  return h(Stage, { accent: "azure" },
+    h("div", { style: { display: "flex", alignItems: "center", gap: 60, height: "100%" } },
+      h("div", { style: { width: 560, flexShrink: 0 } },
+        h(MonoLabel, null, "Cost · 1M classifications"),
+        h(Stat, { value: "~70×", size: 220, style: { marginTop: 24 } }),
+        h("p", { style: { margin: "36px 0 0", fontSize: 44, fontWeight: 500, lineHeight: 1.15, letterSpacing: "var(--track-subtitle)", color: "var(--slide-accent)" } }, "cheaper than Sonnet 5 for small classification tasks")),
+      h(GlassPanel, { style: { width: 820, flexShrink: 0, display: "flex", flexDirection: "column", gap: 34 } },
+        h("div", { style: { display: "flex", justifyContent: "space-between" } }, h(MonoLabel, { size: 18 }, "Model"), h(MonoLabel, { size: 18 }, "Cost per 1M calls")),
+        h(BarRow, { label: "jev", value: "$21", fraction: 0.003, highlight: true, style: cols }),
+        h(BarRow, { label: "sonnet 5", value: "$1,500", fraction: 0.2, style: cols }),
+        h(BarRow, { label: "gpt-6 sol", value: "$1,500", fraction: 0.2, style: cols }),
+        h(BarRow, { label: "opus 5.5", value: "$3,000", fraction: 0.4, style: cols }),
+        h(BarRow, { label: "gpt-6 astra", value: "$7,500", fraction: 1, style: cols }),
+        h(BarRow, { label: "fable 5.1", value: "$7,500", fraction: 1, style: cols }))));
+}
+
+const SLIDES = [Hero, Compare, Types, Pricing, Cost];
+
+function Deck() {
+  const [i, setI] = React.useState(0);
+  React.useEffect(() => {
+    const root = document.getElementById("root");
+    const fit = () => {
+      const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+      root.style.transform = "scale(" + s + ")";
+      root.style.left = (innerWidth - 1920 * s) / 2 + "px";
+      root.style.top = (innerHeight - 1080 * s) / 2 + "px";
+    };
+    const key = (e) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") setI((x) => (x + 1) % SLIDES.length);
+      if (e.key === "ArrowLeft" || e.key === "PageUp") setI((x) => (x - 1 + SLIDES.length) % SLIDES.length);
+    };
+    fit();
+    addEventListener("resize", fit);
+    addEventListener("keydown", key);
+    return () => { removeEventListener("resize", fit); removeEventListener("keydown", key); };
+  }, []);
+  return h("div", { onClick: () => setI((x) => (x + 1) % SLIDES.length), style: { width: 1920, height: 1080, cursor: "pointer" } }, h(SLIDES[i], { key: i }));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(Deck));
+</script>
+</body></html>

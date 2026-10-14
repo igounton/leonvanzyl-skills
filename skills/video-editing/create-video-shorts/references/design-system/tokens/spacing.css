@@ -1,0 +1,19 @@
+:root {
+  /* ── the slide frame ── */
+  --slide-width: 1920px;
+  --slide-height: 1080px;
+  --margin: 100px;          /* top, left and bottom; content starts at 100, 100 */
+  --webcam-lane: 380px;     /* right-hand strip kept clear for the webcam */
+  --content-width: 1440px;  /* 1920 − 100 − 380 */
+  --content-height: 880px;  /* 1080 − 100 − 100 */
+
+  /* ── gaps ── */
+  --gap-xl: 64px;           /* title block to the main visual */
+  --gap-lg: 40px;           /* between sibling panels */
+  --gap-md: 24px;           /* label to value, rows in a list */
+  --gap-sm: 14px;           /* figure to its mono label */
+
+  /* ── padding ── */
+  --panel-pad: 44px;        /* glass panels */
+  --card-pad: 22px;         /* task cards */
+}

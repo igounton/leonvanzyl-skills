@@ -1,0 +1,39 @@
+<!-- @dsCard group="Components" viewport="1280x620" name="Lists" subtitle="SpecRow (inline, stacked, feature), StepList, DataTable, shown at 2/3 size" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-900);color:var(--text);font-family:var(--font-sans);overflow:hidden}
+.frame{width:1280px;height:620px;overflow:hidden}.scale{width:1920px;height:930px;transform:scale(0.6667);transform-origin:0 0;padding:48px;box-sizing:border-box}</style>
+</head><body><div class="frame"><div class="scale" id="root"></div></div>
+<script>
+const { GlassPanel, SpecRow, StepList, DataTable } = window.LeonYouTube_792a19;
+const h = React.createElement;
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 40, alignItems: "start" } },
+    h(GlassPanel, null,
+      h(SpecRow, { label: "Model", value: "GPT-6 Astra" }),
+      h(SpecRow, { label: "Runtime", value: "OpenAI-hosted cloud computer" }),
+      h(SpecRow, { label: "Uptime", value: "24/7", highlight: true }),
+      h(SpecRow, { label: "Laptop", value: "Opt-in, off by default" })),
+    h(GlassPanel, null,
+      h(SpecRow, { layout: "stacked", label: "Chatting with your dot", value: "Doesn’t count toward limits", highlight: true }),
+      h(SpecRow, { layout: "stacked", label: "Tasks it starts in Codex", value: "Count as usual" }),
+      h(SpecRow, { layout: "feature", label: "Its own browser", value: "Signs in with passwords the model never sees" })),
+    h(GlassPanel, null,
+      h(StepList, { steps: ["Create it on desktop", "Name it", "Connect only the apps it needs", "Set Custom Rules first"] })),
+    h(GlassPanel, { padding: 36, style: { gridColumn: "1 / -1" } },
+      h(DataTable, {
+        columns: ["", "OpenAI dots", "Grok Bot", "Hermes Agent", "OpenClaw"],
+        highlightColumn: 1,
+        rowHeader: "label",
+        template: "180px repeat(4, minmax(0, 1fr))",
+        rows: [
+          ["Runs on", "OpenAI cloud computer", "xAI cloud computer", "Your machine or a VPS", "Your machine or a VPS"],
+          ["Models", "GPT-6 Astra", "xAI’s", "Any, incl. local", "Any, incl. local"],
+          ["Cost", "From $100/mo", "SuperGrok Heavy", "Free, MIT", "Free, MIT"]
+        ]
+      }))));
+</script>
+</body></html>

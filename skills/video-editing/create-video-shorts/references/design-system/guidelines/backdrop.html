@@ -1,0 +1,18 @@
+<!-- @dsCard group="Brand" viewport="700x394" name="Horizon wave" subtitle="The stage background: overhead light, a drifting dot field, the crest glowing in the slide accent" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-950);overflow:hidden}.frame{width:700px;height:394px;overflow:hidden}.scale{width:1920px;height:1080px;transform:scale(0.3646);transform-origin:0 0}</style>
+</head><body><div class="frame"><div class="scale" id="root"></div></div>
+<script>
+const { Stage, MonoLabel } = window.LeonYouTube_792a19;
+const h = React.createElement;
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h(Stage, { accent: "ember", waveIntensity: 1.3 },
+    h("div", { style: { display: "flex", flexDirection: "column", gap: 24 } },
+      h(MonoLabel, { size: 40 }, "Stage · accent ember"),
+      h("div", { style: { fontSize: 140, fontWeight: 600, lineHeight: 1, letterSpacing: "-0.035em" } }, "Horizon wave"))));
+</script>
+</body></html>

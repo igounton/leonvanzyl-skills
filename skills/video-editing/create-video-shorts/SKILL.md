@@ -87,4 +87,5 @@ Read `references/lessons.md` before improvising. The biggest ones:
   - `pipeline.md`: the commands
   - `graphics.md`: the engine API
   - `speed.md`: parallelism
+  - `design-system/`: the channel's design system ("Leon YouTube": readme, tokens, components, guidelines), bundled so the skill is self-contained; the brand theme in the code implements it. Read its `readme.md` and tokens before designing anything new
   - `lessons.md`

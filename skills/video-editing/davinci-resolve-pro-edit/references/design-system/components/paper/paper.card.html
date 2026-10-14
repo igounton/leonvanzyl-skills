@@ -1,0 +1,35 @@
+<!-- @dsCard group="Components" viewport="900x520" name="Paper" subtitle="ProductWindow, Pill, TaskCard" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-900);color:var(--text);font-family:var(--font-sans);overflow:hidden}
+.row{display:grid;grid-template-columns:92px 140px minmax(0,1fr);align-items:center;gap:18px;padding:16px 0;border-bottom:1px solid var(--paper-line)}
+.row:last-child{border-bottom:0}
+.key{font-family:var(--font-mono);font-size:16px}
+.top{display:flex;align-items:baseline;justify-content:space-between;font-size:19px;font-weight:600}
+.meta{font-family:var(--font-mono);font-size:14px;font-weight:400;color:var(--ink-2)}
+.bar{margin-top:8px;height:9px;border-radius:999px;background:#EFF0F2}
+.fill{height:9px;border-radius:999px;background:var(--slide-accent)}</style>
+</head><body><div id="root" class="ly-accent-ember" style="position:relative;height:520px"></div>
+<script>
+const { ProductWindow, Pill, TaskCard } = window.LeonYouTube_792a19;
+const h = React.createElement;
+function row(pill, key, value, meta, pct) {
+  return h("div", { className: "row" },
+    h(Pill, { style: { justifySelf: "start" } }, pill),
+    h("span", { className: "key" }, key),
+    h("div", null,
+      h("div", { className: "top" }, h("span", null, value), h("span", { className: "meta" }, meta)),
+      h("div", { className: "bar" }, h("div", { className: "fill", style: { width: pct + "%" } }))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h("div", { style: { position: "relative", padding: "36px 40px 0 260px" } },
+    h(ProductWindow, { tabs: ["Request", "Answers", "Usage"], active: "Answers", badge: "jev-latest", style: { width: 580 } },
+      row("Choice", "department", "billing", "p 0.88 · conf 0.81", 88),
+      row("Score", "frustration", "1.05", "conf 0.92", 52.5),
+      row("Noul", "is_urgent", "yes", "p 0.95", 95)),
+    h(TaskCard, { color: "ember", glyph: "arrow", title: "Route to billing", description: "Confidence 0.81 lets your code act or escalate", style: { position: "absolute", left: 40, top: 330, width: 400 } })));
+</script>
+</body></html>

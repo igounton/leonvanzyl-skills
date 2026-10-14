@@ -130,4 +130,5 @@ Read `references/lessons.md` before improvising. The biggest ones:
   edit (plan, zoom specs, both graphics modules, the briefs) that set the quality bar.
 - `references/`: `editing-spec.md` (the contract), `pipeline.md` (commands), `resolve-assembly.md` (MCP calls and
   gotchas), `graphics.md` (engine API), `foundation-cut.md` + `editorial-rules.md` (the clean cut),
-  `setup-and-troubleshooting.md`, `lessons.md`.
+  `setup-and-troubleshooting.md`, `lessons.md`, and `design-system/` (the channel's "Leon YouTube" design system:
+  readme, tokens, components, guidelines; bundled so the skill is self-contained, and implemented by the stage theme).

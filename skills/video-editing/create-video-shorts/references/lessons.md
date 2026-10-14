@@ -71,7 +71,7 @@
 - **The channel's design system, everywhere.** The yellow Instrument Serif caption highlight was "ugly" and the white
   luxury world generic; the long-form edits in his "Leon YouTube" design system (graphite glass, Figtree / Geist Mono,
   azure) got "Now that looks cool. Lock it in". Shorts now use the same: the keyword chip, the glass cover and CTA, and
-  the engine's `stage` theme. The design system lives in C:\cognaitiv-ai\design-system\leon-youtube (read-only).
+  the engine's `stage` theme. The design system is bundled in references/design-system/ (SOURCE.md says how to refresh it).
 - **PIL replaces pixels, it doesn't blend:** `ImageDraw` with a translucent fill on an RGBA canvas punches a see-through
   hole (the CTA's input field showed the footage through it). Mix translucent fills to opaque colours first, or draw them
   on their own layer and `alpha_composite`. (The chip's 33% accent hairline relies on it on purpose: the approved look.)

@@ -1,0 +1,39 @@
+:root {
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ── slide scale, for 1920×1080 ── */
+  --type-stat-xl: 220px;    /* the one figure a big-stat slide is about */
+  --type-display: 140px;    /* hero titles, one to three words */
+  --type-stat: 112px;       /* figures inside panels */
+  --type-headline: 96px;    /* content slide titles */
+  --type-title: 54px;       /* statements inside panels */
+  --type-subtitle: 46px;    /* the accent line under a title */
+  --type-body: 30px;        /* supporting copy */
+  --type-data: 24px;        /* mono row labels */
+  --type-card-title: 24px;  /* task card titles, on paper */
+  --type-caption: 22px;     /* footnotes and sources */
+  --type-code: 22px;        /* code panels */
+  --type-label: 22px;       /* mono uppercase eyebrows */
+  --type-pill: 14px;        /* pills on paper */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --track-stat-xl: -0.05em;
+  --track-stat: -0.045em;
+  --track-display: -0.035em;
+  --track-headline: -0.03em;
+  --track-title: -0.025em;
+  --track-subtitle: -0.01em;
+  --track-label: 0.14em;
+  --track-pill: 0.08em;
+
+  --leading-display: 1;
+  --leading-headline: 1.02;
+  --leading-title: 1.1;
+  --leading-subtitle: 1.15;
+  --leading-body: 1.4;
+  --leading-code: 1.65;
+}

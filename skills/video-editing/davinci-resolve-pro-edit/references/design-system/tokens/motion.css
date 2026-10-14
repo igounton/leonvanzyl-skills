@@ -1,0 +1,11 @@
+/* Nothing enters: slides are recorded as held frames, so every moment is already
+   complete. Motion is ambient and looping: the wave drifts, tiles float, the
+   cursor nudges, Track dots travel. All of it stops for reduced motion. */
+:root {
+  --float-distance: 12px;
+  --dur-float: 7s;         /* stagger a second tile with a negative delay */
+  --dur-nudge: 4s;         /* the cursor */
+  --dur-track-slow: 6s;
+  --dur-track-fast: 0.9s;
+  --wave-fps: 30;          /* @kind other */
+}

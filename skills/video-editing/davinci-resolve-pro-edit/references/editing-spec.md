@@ -113,7 +113,7 @@ words: a move starts 0.25 s before the word that names its target; a mark lands 
   rest), because it hard-cuts in.
 
 **words - keyword pops (hook only). LOCKED DESIGN (user-approved 2026-10-13): the channel's own slide system.**
-Leon's slides follow the "Leon YouTube" design system (`C:\cognaitiv-ai\design-system\leon-youtube`: graphite stage,
+Leon's slides follow the "Leon YouTube" design system (bundled in `references/design-system/`: graphite stage,
 Figtree, Geist Mono labels, azure #2F95FF primary accent, ember #FF8A5B second - the orange dot of the cognaitiv logo on
 his shirt). A keyword pop is a small piece of that system:
 - a graphite glass chip: fill stage-800 rgb(24,25,28) at ~88% (more opaque than the slides' 62% glass, since an alpha
@@ -152,7 +152,7 @@ Layout px are 1920x1080; renders are made at the timeline's resolution (x2 on UH
 - **Keyword pops** centre (960, 905). **CTA card** x 64, y 836, 900x176.
 
 ## 5. Graphics style
-**The channel's own design system** ("Leon YouTube", `C:\cognaitiv-ai\design-system\leon-youtube` - read its
+**The channel's own design system** ("Leon YouTube", bundled in `references/design-system/` - read its
 `readme.md` and tokens before designing anything new): his slides are a product keynote on a graphite stage, and the
 B-roll is that deck come alive. The engine's default `theme: 'stage'` paints it (`references/graphics.md`); the old
 bright white world (`theme: 'paper'`) was rejected for this channel ("it needs to be done right", 2026-10-13).

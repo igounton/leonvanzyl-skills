@@ -1,0 +1,14 @@
+:root {
+  /* Glass: stage-800 at 62% over the wave, blurred. */
+  --glass-fill: rgba(24, 25, 28, 0.62);
+  --glass-blur: 24px;
+
+  /* A top highlight plus one wide, soft shadow cast far below. */
+  --shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 50px 120px -40px rgba(0, 0, 0, 0.85);
+  --shadow-card: 0 34px 80px -24px rgba(0, 0, 0, 0.8);
+  --shadow-window: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  /* The winning panel: an accent hairline and a bloom. Once per slide. */
+  --glow-azure: 0 0 0 1px rgba(47, 149, 255, 0.3), 0 0 110px -30px rgba(47, 149, 255, 0.8);
+  --glow-ember: 0 0 0 1px rgba(255, 138, 91, 0.3), 0 0 110px -30px rgba(255, 138, 91, 0.8);
+}

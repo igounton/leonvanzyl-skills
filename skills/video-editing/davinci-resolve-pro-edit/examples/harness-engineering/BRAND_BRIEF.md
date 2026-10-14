@@ -2,7 +2,7 @@
 
 Leon's verdict on the white-world look: it doesn't match his channel. His slides, the keyword pops (already approved:
 "Now that looks cool") and now ALL graphics follow his design system "Leon YouTube"
-(`C:\cognaitiv-ai\design-system\leon-youtube` - read `readme.md` and skim `tokens/*.css` and the component
+(now bundled in the skill's `references/design-system/` - read `readme.md` and skim `tokens/*.css` and the component
 `.prompt.md` files; don't modify anything there). He said: "I don't care about the time. It needs to be done right."
 
 The graphics engine already has the theme (`theme: 'stage'` is now the DEFAULT for every page): the graphite stage

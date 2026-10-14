@@ -1,0 +1,26 @@
+<!-- @dsCard group="Components" viewport="960x440" name="Data" subtitle="Stat (fits its column: 4,000+ at 220px), BarRow, Track" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-900);color:var(--text);font-family:var(--font-sans);overflow:hidden}</style>
+</head><body><div id="root"></div>
+<script>
+const { Stat, BarRow, Track, GlassPanel, MonoLabel } = window.LeonYouTube_792a19;
+const h = React.createElement;
+const cols = { gridTemplateColumns: "170px minmax(0,1fr) 130px", gap: 18 };
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h("div", { style: { display: "flex", gap: 40, padding: 36, alignItems: "flex-start" } },
+    h("div", { style: { width: 300, flexShrink: 0, display: "flex", flexDirection: "column", gap: 28 } },
+      h(Stat, { value: "4,000+", label: "connected apps", size: 220 }),
+      h(Track, null),
+      h(Track, { highlight: true })),
+    h(GlassPanel, { padding: 30, style: { flexGrow: 1, display: "flex", flexDirection: "column", gap: 22 } },
+      h("div", { style: { display: "flex", justifyContent: "space-between" } }, h(MonoLabel, { size: 14 }, "Model"), h(MonoLabel, { size: 14 }, "Cost per 1M calls")),
+      h(BarRow, { label: "jev", value: "$21", fraction: 0.003, highlight: true, style: cols }),
+      h(BarRow, { label: "sonnet 5", value: "$1,500", fraction: 0.2, style: cols }),
+      h(BarRow, { label: "opus 5.5", value: "$3,000", fraction: 0.4, style: cols }),
+      h(BarRow, { label: "gpt-6 astra", value: "$7,500", fraction: 1, style: cols }))));
+</script>
+</body></html>

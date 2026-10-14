@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="960x540" name="Slide" subtitle="Stage and SlideTitle: the 1920×1080 slide with the horizon wave, at half size with the webcam lane shown" -->
+<!doctype html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../../styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--stage-950);overflow:hidden}.frame{width:960px;height:540px;overflow:hidden}.scale{width:1920px;height:1080px;transform:scale(0.5);transform-origin:0 0}</style>
+</head><body><div class="frame"><div class="scale" id="root"></div></div>
+<script>
+const { Stage, SlideTitle, IconTile, CodePanel } = window.LeonYouTube_792a19;
+const h = React.createElement;
+const lines = [
+  "POST /v1/systemone",
+  "{",
+  '  "model": "jev-latest",',
+  '  "state": "Help! My payouts have',
+  { text: '    been failing for 3 days.",', wrap: true },
+  '  "questions": {',
+  '    "is_urgent": {',
+  '      "type": "noul",',
+  '      "instructions": "Does this',
+  { text: '        convey urgency?"', wrap: true },
+  "    }",
+  "  }",
+  "}"
+];
+ReactDOM.createRoot(document.getElementById("root")).render(
+  h(Stage, { accent: "azure", showLane: true },
+    h("div", { style: { display: "flex", alignItems: "center", gap: "var(--gap-xl)", height: "100%" } },
+      h(SlideTitle, { size: "display", eyebrow: "TypeSafe · Jev", title: "System One", subtitle: "Typed answers in milliseconds", style: { width: 760, flexShrink: 0 } },
+        h("div", { style: { position: "relative", height: 150, marginBottom: 30 } },
+          h(IconTile, { color: "azure", glyph: "code", size: 116, tilt: -10, float: true, style: { position: "absolute", left: 0, top: 26 } }),
+          h(IconTile, { color: "iris", glyph: "eyes", size: 100, tilt: 9, float: true, style: { position: "absolute", left: 150, top: 0, animationDelay: "-3s" } }))),
+      h(CodePanel, { lines: lines, cursor: true, style: { width: 616, flexShrink: 0 } }))));
+</script>
+</body></html>

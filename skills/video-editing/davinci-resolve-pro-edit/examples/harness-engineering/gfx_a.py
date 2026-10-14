@@ -2,8 +2,8 @@
 # r02 g07 g08) and Level 1 (g09 r03 g10 g11 g12).
 # Build: $PY scripts/build_gfx.py a        (one beat or a few: GFX_A=g01,g02 $PY scripts/build_gfx.py a)
 #
-# BRAND (v2): every scene follows Leon's channel design system "Leon YouTube" (C:\cognaitiv-ai\design-system\
-# leon-youtube): the graphite stage with its beams and the animated horizon wave (engine default theme 'stage'),
+# BRAND (v2): every scene follows Leon's channel design system "Leon YouTube" (bundled in the skill's
+# references/design-system/): the graphite stage with its beams and the animated horizon wave (engine default theme 'stage'),
 # explanations on frosted GLASS panels, real product UI / chats / files / captures on white WINDOW / PAPER cards,
 # Figtree 500/600 + Geist Mono labels, azure accent, ember for warnings / refusals / secrets, mint for passes, his glossy
 # icon tiles (tile_html: Configure = azure code, Build = iris bolt, Orchestrate = mint eyes + antenna, Memory = ember

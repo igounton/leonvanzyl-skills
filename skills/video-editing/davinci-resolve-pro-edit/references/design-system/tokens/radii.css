@@ -1,0 +1,8 @@
+:root {
+  --radius-panel: 28px;   /* glass and code panels */
+  --radius-card: 24px;    /* task cards */
+  --radius-window: 22px;  /* product windows */
+  --radius-chip: 14px;    /* quote boxes and chips inside paper */
+  --radius-tile: 28.5%;   /* glossy icon tiles */
+  --radius-pill: 999px;   /* pills, bars and tracks */
+}

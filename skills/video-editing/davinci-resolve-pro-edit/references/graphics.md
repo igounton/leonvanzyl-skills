@@ -10,7 +10,7 @@ real sources). Copy their patterns.
 
 ## Theme: the channel's design system (default)
 Every page is themed `stage` unless its CFG says `theme='paper'` (the old white world - rejected for Leon's channel).
-The theme is his "Leon YouTube" design system (`C:\cognaitiv-ai\design-system\leon-youtube`; editing-spec section 5):
+The theme is his "Leon YouTube" design system (bundled in `references/design-system/`; editing-spec section 5):
 - **Painted for you** behind the world: the graphite stage gradient + spotlight, two light beams, the animated horizon
   wave of dots in the accent (`cfg.wave = dict(level='low'|'middle'|'high', k=1.0)` or `False`), the vignette.
 - **Card kinds:** `glass` (frosted stage-800, hairline, panel shadow, white text; `highlight=True` = accent hairline +

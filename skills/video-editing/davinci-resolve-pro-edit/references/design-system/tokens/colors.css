@@ -1,0 +1,51 @@
+:root {
+  /* ── stage: graphite neutrals, lit from above ── */
+  --stage-950: #0B0C0E;
+  --stage-900: #111214;
+  --stage-800: #18191C;
+  --stage-700: #212226;
+  --stage-600: #2C2D31;
+
+  /* ── hairlines are white at low alpha ── */
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+
+  /* ── text on the stage ── */
+  --text: #FFFFFF;
+  --text-secondary: #A3A6AD;
+  --text-muted: #7E818A;
+
+  /* ── accents: azure is primary, ember second; iris and mint for tiles ── */
+  --azure: #2F95FF;
+  --ember: #FF8A5B;
+  --iris: #9C7CFF;
+  --mint: #4FD6A0;
+
+  /* ── accent text and pills on paper ── */
+  --azure-ink: #1560D0;
+  --ember-ink: #B8461A;
+  --iris-ink: #5B3FD1;
+  --mint-ink: #0F7A52;
+  --azure-wash: #E8F2FF;
+  --ember-wash: #FFEFE7;
+  --iris-wash: #F0EBFF;
+  --mint-wash: #E3F8EF;
+
+  /* ── paper: product windows and task cards floating on the stage ── */
+  --paper: #FFFFFF;
+  --paper-2: #F3F4F6;
+  --paper-line: #ECEDF0;
+  --ink: #111214;
+  --ink-2: #5F636B;
+
+  /* ── data ── */
+  --bar-rest: #5A5D64;
+
+  /* ── code ── */
+  --code-text: #E6E7EA;
+  --code-keyword: #7DB8FF;
+  --code-string: #9BE3B9;
+  --code-number: #C7A9FF;
+  --code-comment: #6E717A;
+  --code-gutter: #474A51;
+}

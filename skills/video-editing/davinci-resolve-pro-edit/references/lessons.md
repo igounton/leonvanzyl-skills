@@ -164,7 +164,7 @@ demo + browser sources, webcam PiP that MOVES between OBS scenes inside one file
   system Chrome needed a temp folder next to the media, then a copy into `captures/`.
 
 - **Match the channel brand, not a generic style.** Leon's slides are built from his "Leon YouTube" design system
-  (C:\cognaitiv-ai\design-system\leon-youtube: tokens/colors.css, typography.css, elevation.css, radii.css and the
+  (bundled in references/design-system/: tokens/colors.css, typography.css, elevation.css, radii.css and the
   component prompts). Overlays that sit on his footage (keyword pops; next: CTA cards, zoom marks) take its graphite
   glass, Figtree / Geist Mono and azure/ember accents. The keyword pop design is locked in editing-spec.md section 3.
 - **Split mattes: RVM, not u2net.** u2net's salient-object matte is a soft low-res blob that swallowed the guitar behind
