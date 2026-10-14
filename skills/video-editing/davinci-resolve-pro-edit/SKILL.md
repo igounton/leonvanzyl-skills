@@ -1,6 +1,6 @@
 ---
 name: davinci-resolve-pro-edit
-description: Professionally edit a long-form YouTube recording (talking head, screencast, tutorial) in DaVinci Resolve end to end, with the create-video-shorts editing intelligence carried over to long form and assembled through the davinci-resolve MCP. Reuses or makes a clean foundation cut; gives the first 30-45 s a short-form hook (screen zooms with highlights, punch-ins, luxury-tech graphics with real source captures and motion blur, a split with a head pop-out, keyword pops, music that fades out after the hook, a riser); keeps the body restrained (zooms and highlights on what is discussed, captures of cited pages, community CTA cards, SFX, no music); builds a new Pro Edit timeline with every addition on its own track, plus chapters, an SRT and publishing copy. Use it whenever the user wants a long-form video or Resolve timeline professionally edited, polished or finished, or given zooms, graphics, B-roll, highlights, sound design or a hook, even without naming a skill. Not for shorts or a clean cut alone.
+description: Professionally edit a long-form YouTube recording (talking head, screencast, tutorial) in DaVinci Resolve end to end, with the create-video-shorts editing intelligence carried over to long form and assembled through the davinci-resolve MCP. Reuses or makes a clean foundation cut; gives the first 30-45 s a short-form hook (screen zooms with highlights, punch-ins, luxury-tech graphics with real source captures and motion blur, a split with a head pop-out, keyword pops, music that fades out after the hook, a riser); keeps the body moving with B-roll wherever the talk explains or cites something (zooms with highlights, real articles and pages with the cited line marked, explainer graphics, logos, the speaker's own videos, community CTA cards, library SFX; no music); builds a new Pro Edit timeline with every addition on its own track, plus chapters, an SRT and publishing copy. Use it whenever the user wants a long-form video or Resolve timeline professionally edited, polished or finished, or given zooms, graphics, B-roll, highlights, sound design or a hook, even without naming a skill. Not for shorts or a clean cut alone.
 ---
 
 # DaVinci Resolve Pro Edit
@@ -15,7 +15,7 @@ of addition, so the user can adjust or remove anything.
 spec over to long form: the same graphics style, camera language, fact checking and sound design, with the hook /
 body split. The rules the user cares most about:
 - **Music plays under the hook only** and fades out over 2-3 s right after it. Never under the body.
-- **The body is restrained**: zooms, highlights, real sources, CTA cards and SFX where they help - nothing over the top.
+- **The body keeps showing**: a zoom with highlights, the real article or page, an explainer graphic, a logo or the speaker's own video about every 10-20 s (~80% of the runtime covered on theory), CTA cards and SFX on every visual event - energy from showing, not decoration (no music or keyword pops after the hook).
 - **Nothing on the clean cut changes.** The pro edit is a duplicate of it with new tracks on top.
 Where the user's request differs from the spec, the user wins.
 
@@ -57,8 +57,10 @@ Commands for every step are in `references/pipeline.md`.
 2. **Set up and map the programme** (~5-10 min, mostly background). `setup.sh "$W" "$M"`, then on the clean cut:
    `probe_timeline_structure` -> `vedit.py prepare` + `transcribe` (CrisperWhisper, hotwords as in the foundation
    cut) -> `program.py` (every V1 item and word on programme time, the voice as it plays) -> `scenes.py` (camera vs
-   screen, the PiP window per file). LOOK at `scenes.png`. Read `transcript.txt` like a paper edit.
-3. **Research, in parallel** (subagent): fact-check every figure against 2+ sources; capture the pages the speaker
+   screen, the PiP window per file) -> `pip_items.py` (the PiP corner per V1 item: OBS scenes can move the webcam
+   inside one file). LOOK at `scenes.png`. Read `transcript.txt` like a paper edit. `patch_flash.py scan` lists
+   items that end or start on a flash of another window - cover each with a `fix` beat (`patch_flash.py <id> ...`).
+3. **Research, in parallel** (one long-lived subagent): fact-check every figure against 2+ sources; capture the pages the speaker
    cites but the recording doesn't show, official logos, pricing and docs as 2x PNGs into `W/captures/`.
 4. **Plan once** into `W/edit_plan.json` (`examples/edit_plan_example.json`): hook_end, music style and mood,
    the beats (zoom, punch, gfx, words, cta) with word-cued times, chapters, caption fixes, the publishing copy.
@@ -71,21 +73,29 @@ Commands for every step are in `references/pipeline.md`.
    - zooms, keyword pops, CTA cards and the audio: preview a few zoom frames first (`zoom.py --preview`, seconds),
      then `bash scripts/render_beats.sh` in the background renders every zoom / words / cta beat of the plan in
      parallel (one process per beat) and runs `audio.py` after them - then listen to the hook in `mix_preview.wav`;
-   - graphics: one subagent per 1-3 gfx beats, following `references/graphics.md` and `examples/gfx_example.py`:
+   - graphics: one or two LONG-LIVED subagents (the user's preference - many small agents burn tokens), each owning
+     half of the gfx beats with a written brief (beats, cue words with times, assets, PiP rules), following
+     `references/graphics.md`, `examples/gfx_example.py` and the reference edit in `examples/harness-engineering/`
+     (its README indexes the explainers to copy: the software-factory swarm, concept diagrams built word by word,
+     real sources with the cited line highlighted):
      assets -> `build_gfx.py` -> `render_gfx.sh draft` -> `draftsheet.py` (LOOK, fix) -> `render_gfx.sh full`
      (lossless PNG capture, one Chrome per worker, throttled machine-wide so any number of subagents can call it)
-     -> `compose.py` (split beats: `--matte` first, on the GPU; several beats with `--jobs`).
+     -> `compose.py` (split beats: `--matte` first - Robust Video Matting on the GPU, u2net as the fallback; several
+     beats with `--jobs`).
    Check every render: previews and sheets before full renders, one full-resolution frame of every split
    (`compose.py <id> --preview t` seeks straight to it).
 6. **Assemble in Resolve** (`references/resolve-assembly.md`): duplicate the clean cut as
    "<base> - Pro Edit vN", count its tracks, `place.py plan`, add and name the PE tracks, import `M` into a bin,
    `place.py ids`, one `append_to_timeline`, punch-ins with `bulk_set_item_properties`, markers, save. Then
-   `place.py verify` against a fresh structure probe and capture a few frames with `timeline_frame capture`.
+   `place.py verify` against a fresh structure probe, and check frames from a 1080p review render (pipeline.md
+   section 7; `timeline_frame capture` once hung for 30 minutes).
 7. **Publish and report:** `publish.py` (`captions.srt`, `PUBLISH.md` with chapters and the community links),
    then `report.md` (spec section 9). Tell the user: the timeline name, what was added and where, the archived
    duplicates the MCP made (safe to delete - never delete them yourself), and to normalise to -14 LUFS on delivery.
 8. **Edits are incremental:** change the plan, re-render only the touched beats, re-import those files and replace
-   their clips (`references/pipeline.md` section 8). Fold the user's taste into `references/lessons.md`.
+   their clips (`references/pipeline.md` section 8); many swaps at once go through one `script_plugin run_inline`.
+   A rebuilt audio layer goes on new tracks with `place_audio_swap.py`. Fold the user's taste into
+   `references/lessons.md`.
 
 ## Things that are easy to get wrong
 Read `references/lessons.md` before improvising. The biggest ones:
@@ -104,11 +114,20 @@ Read `references/lessons.md` before improvising. The biggest ones:
 ## Files
 - `scripts/`: the pipeline (copied into `W/scripts` by `setup.sh`; per-project values live in `W/project.json`).
   `vedit.py` (vendored from davinci-resolve-video-edit), `program.py`, `scenes.py`, `look.py`, `zoom.py`,
-  `overlay.py`, `assets.py`, `build_gfx*.py`, `render_gfx.sh`, `draftsheet.py`, `compose.py`, `matte_gpu.py`,
-  `audio.py`, `music.py` (from create-video-shorts), `render_beats.sh`, `censor.py`, `place.py`, `publish.py`,
+  `overlay.py`, `assets.py`, `build_gfx*.py`, `render_gfx.sh`, `draftsheet.py`, `compose.py`, `matte_rvm.py`
+  (split mattes, RVM), `matte_gpu.py` (u2net fallback), `audio.py` + `sfxlib.py` (the royalty-free SFX library),
+  `music.py` (synthesized beds, from create-video-shorts), `music_gen.py` (generated hook music), `sfx_library.py`
+  (builds the SFX library), `render_beats.sh`, `censor.py`, `pip_items.py`, `patch_flash.py`, `words.py` (word
+  times in a window), `place.py`, `place_audio_swap.py` (a rebuilt audio layer onto new tracks), `publish.py`,
   `media.py`, `config.py`, `faces.py`.
-- `assets/`: the 16:9 graphics engine + GSAP, Poppins and Instrument Serif, the face models.
-- `examples/`: the real test plan, its graphics config and its report.
+- Shared, per machine (setup.sh): `~/.cache/pro-edit-models/rvm/` (matting), the music-generation env and weights
+  (`references/setup-and-troubleshooting.md`).
+- `assets/`: the 16:9 graphics engine + GSAP, Poppins, Instrument Serif, Figtree and Geist Mono, the face models, and
+  `sfx/` - the royalty-free SFX library (54 sounds + `manifest.json` with sources and licences). Git holds the 27 CC0
+  sounds; the 27 Mixkit ones may not be redistributed, so on a machine without them run
+  `scripts/sfx_library.py build` (setup.sh does it; `references/setup-and-troubleshooting.md`, "Sound-effects library").
+- `examples/`: the real test plan, its graphics config and its report, and `harness-engineering/` - the reference
+  edit (plan, zoom specs, both graphics modules, the briefs) that set the quality bar.
 - `references/`: `editing-spec.md` (the contract), `pipeline.md` (commands), `resolve-assembly.md` (MCP calls and
   gotchas), `graphics.md` (engine API), `foundation-cut.md` + `editorial-rules.md` (the clean cut),
   `setup-and-troubleshooting.md`, `lessons.md`.

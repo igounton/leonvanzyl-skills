@@ -49,7 +49,9 @@ def merge_words(words, phrases):
         if hit:
             last = ws[k + len(hit[0]) - 1]
             tail = re.sub(r'^.*?([.,?!]*)$', r'\1', last['w'])
-            out.append(dict(w, w=hit[1] + tail, e=last['e'])); k += len(hit[0]); continue
+            rep = hit[1]
+            if not out or re.search(r'[.?!]$', out[-1]['w']): rep = rep[:1].upper() + rep[1:]   # a fix that starts a sentence keeps its capital
+            out.append(dict(w, w=rep + tail, e=last['e'])); k += len(hit[0]); continue
         out.append(w); k += 1
     return out
 

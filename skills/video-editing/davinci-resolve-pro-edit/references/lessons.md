@@ -110,6 +110,96 @@ for two minutes while the chat scrolled)
 - **Reference frames:** `censor.py ref` is frame-exact. The first reference was cut with a direct seek and came out
   one frame late (see "Frames are pure functions" above); harmless for matching, but measure boxes on the exact frame.
 
+**Slide-deck talks** (ai-practitioners-summit, 2026-10-06: a 37-minute conference talk, 383 V1 items, mostly the
+speaker's own dark slides plus GitHub/VS Code screens, webcam PiP top-right)
+- **Check the PiP window by eye when scenes.py says "consensus".** Every file's edge scan ran off and the consensus
+  came out 702x1008, but the real webcam was 704x950 (a one-column scan down x 3500 shows the PiP's bottom edge as a
+  step to the flat background at y 957). A window that is too tall pastes a strip of unzoomed screen under the
+  webcam in every zoom. Patch `files.*.pip` and `items.*.pip` in scenes.json before rendering anything.
+- **A zoom can stay in one 'screen' scene and still cross a content change.** A V1 cut from a slide to a GitHub page
+  is "screen -> screen", so the scene check passes. Look at a frame just after every V1 cut inside a beat
+  (`look.py`) - four beats here ran onto a different page (a slide -> the repo listing, an agent panel closing, a
+  "custom harnesses" slide -> a terminal). End the beat on the cut, or plan it on the new page.
+- **An instant punch-in on a cut is `cam0`, not a `dur: 0` move at t 0.** The move version motion-blurs frame 0
+  (the shutter samples the k = 1 state before it). `cam0: {fx, fy, k}` starts the clip at the tighter framing.
+- **Read along with the slide.** On a talk built from the speaker's own slides, the strongest body beat is a zoom
+  that follows the narration through the slide's rows - a box on each card or row as it is named, a band on the line
+  being read - then pulls back before the next V1 item continues the same slide. 62 such zooms in 37 minutes read as
+  calm, not busy, because each one only moves on a cue word.
+- **Don't add a CTA card for something already on screen.** When the speaker says "install it with npx cubefarm" over
+  the README's Get started block, zoom on the real line instead of typing the same command into a card.
+- **Resources that criticise:** when the speaker is critical of a site ("the same one or two names, for the silliest
+  of things"), show the site but crop it so no person's or publisher's name is readable.
+- **Numbers in caption fixes:** the "five point five" -> "5.5" merge runs in the same pass as `caption_fixes`, so a
+  phrase fix must use the spoken words ("Opus five point five": "Opus 5.5") to keep the name and number in one cue.
+- **Removed beats leave event files behind.** `audio.py` now places SFX only for beats in the plan; before that fix, a
+  CTA replaced by a zoom still got its pop, key ticks and click.
+- **The user's own markers:** a duplicated timeline may carry the editor's markers on chapter-like frames; `place.py
+  ids --existing-markers` nudges chapter markers one frame off them. Leave the user's markers alone.
+
+**Explainer-heavy talks** (harness-engineering, 2026-10-13: a 16-minute theory video, 128 V1 items, slides + a VS Code
+demo + browser sources, webcam PiP that MOVES between OBS scenes inside one file)
+- **The PiP can change corners inside one file.** 5.mkv had the webcam top-right on the slides and bottom-left in the VS
+  Code scene; `scenes.py` keeps one window per file, so its edge scan failed and the consensus was wrong for 24 items.
+  Detect the corner per item (colourfulness of the two corner patches over 2 fps samples) and store `items.<v1>.pip`;
+  the work-dir copies of zoom.py / compose.py / look.py were patched to prefer the item's window. Graphics on those
+  items mirror the fvp layout (anchor [1136, 540], capture frame at x 416).
+- **Scan the cut for flash frames.** The user's cut ended an item on 22 frames of another app window (a 0.37 s flash).
+  A head/tail scan of every item (96x54 grey, frame diffs > 12) plus a frame-exact look found it; `patch_flash.py` holds
+  the last clean screen and pastes the live PiP back each frame on PE Graphics - V1 stays untouched.
+- **Overlapping SFX need more lanes.** Typing runs and pops from busy graphics overlap; one SFX track silently drops
+  the later clip in Resolve. place.py spreads SFX greedily over "PE SFX", "PE SFX 2" and "PE SFX 3" (with the
+  library's auto highlights and dings, two lanes still dropped 2 of 210 sounds; three dropped none).
+- **Write edit_plan.json atomically.** A plan rewrite while overlay.py read it failed one beat (StopIteration).
+- **Two long-lived graphics agents beat many small ones** (the user's preference: small agents burn tokens). One per
+  half of the video, each with a written brief (beats, cue words with times, real assets to use, the PiP rules) and
+  its own `gfx_<name>.py`; research findings are relayed to them by message as they land.
+- **Explainers that worked:** a continuous "world" split over two beats (the software-factory swarm, g20 -> g21, one
+  timeline function with an offset - the cut between them is invisible); true-scale bars for token budgets; the
+  speaker's own slide icons rebuilt in CSS so the B-roll matches the slides; real watch pages / thumbnails for every
+  "check out my video on ...".
+- **Fact check feeds the graphics.** "A hook masks the prompt" is not what Claude Code settings hooks can do (block or
+  add context only); the graphic showed a mod-style handler instead. Relay accuracy notes to graphics agents early.
+- **Chrome (outside the Claude app) can't write into the app's virtualised AppData.** Re-capturing a page with the
+  system Chrome needed a temp folder next to the media, then a copy into `captures/`.
+
+- **Match the channel brand, not a generic style.** Leon's slides are built from his "Leon YouTube" design system
+  (C:\cognaitiv-ai\design-system\leon-youtube: tokens/colors.css, typography.css, elevation.css, radii.css and the
+  component prompts). Overlays that sit on his footage (keyword pops; next: CTA cards, zoom marks) take its graphite
+  glass, Figtree / Geist Mono and azure/ember accents. The keyword pop design is locked in editing-spec.md section 3.
+- **Split mattes: RVM, not u2net.** u2net's salient-object matte is a soft low-res blob that swallowed the guitar behind
+  his head on and off (flicker at the ear). Robust Video Matting (matte_rvm.py, ResNet-50 ONNX, ratio 0.4, warmed-up
+  recurrent state) follows hair strands and leaves objects touching the head in the background. A guided filter and a
+  background-plate difference key were tried first and failed (a light ghost of the guitar edge; the plate never saw
+  the wall behind the hair). On Windows, onnxruntime-gpu needs the nvidia-*-cu12 wheels' bin dirs added to the DLL
+  path (matte_gpu.py and matte_rvm.py do it) or cuDNN fails to load.
+
+- **Restyle by re-rendering, then swap in bulk.** The brand pass re-rendered 34 zooms and 27 graphics under `--tag brand`
+  and swapped all 61 with one `script_plugin run_inline` (Python: walk the media pool, `ReplaceClip(path)` on each id
+  from import_result.json, `SaveProject()`) - seconds instead of 61 MCP round trips. Keep the old renders until the
+  user signs off.
+- **A rebuilt audio layer goes on new tracks.** Library SFX, auto highlight/ding/whoosh/sting events and a new music
+  file move and change every sound, so replace_clip can't do it: `place_audio_swap.py` plans "PE SFX v2" ... tracks,
+  one append_to_timeline of 212 rows (the reply overflowed the tool output and was saved to a file - parse it), then
+  the old PE audio tracks are disabled and renamed "(old)". If only the music changes (same length), re-render it under
+  a new tag and replace_clip the one music clip.
+- **Generated hook music: the level matters as much as the track.** ACE-Step 1.5 XL (music_gen.py, MIT, ~15 s a
+  90 s take on the 5090 once loaded) wrote four "inspirational" candidates; the pick sat 18 LU under the hook's voice
+  and ducked another ~5 dB under speech - barely there. 15 LU under (`music.under_voice_lu: 15`) let the lift read.
+  Generate 60-90 s, cut where the lift lands (`file_offset`), keep the alternatives for the user.
+- **`timeline_frame capture` can hang.** One call blocked for 30 minutes (Resolve on the Edit page with a long
+  timeline). Prefer a review render through the scripting API (`run_inline`: LoadRenderPreset 'YouTube - 1080p',
+  SetCurrentRenderFormatAndCodec('mp4', 'H264_NVIDIA'), SetRenderSettings TargetDir/CustomName/FormatWidth/Height,
+  AddRenderJob, StartRendering - it returns at once; poll GetRenderJobStatus) and decode frames from the file.
+  SetRenderSettings returns False if any one key is rejected ('VideoQuality' as a number was) but applies the rest -
+  read the job back with GetRenderJobList. Frame captures also reset the Deliver page's format to JPEG.
+
+- **No sponsor that isn't this video's sponsor.** The swarm graphic named the worker pool "Upstash Box" with its
+  logo, because the speaker's software-factory skill runs on it; Upstash had sponsored an earlier video, not this one,
+  and Leon had it replaced with "Agent Swarm" before release. Brand names in explainers only when the speaker names
+  them; a sandbox / hosting / tooling vendor he doesn't mention stays generic. Captured pages (watch pages, READMEs)
+  may carry sponsor lines in descriptions: crop or frame them out.
+
 ## User feedback log
 Add the user's reactions to each edit here so the rules keep improving.
 - 2026-09-30, Sonnet 5.5 vs Opus 5.5 vs Fable 5.1 (test build "YTHD60 - Pro Edit TEST", hook + two body beats):
@@ -117,3 +207,29 @@ Add the user's reactions to each edit here so the rules keep improving.
   highlights, real sources and SFX. After watching the first 40 s in Resolve: "the edit was really good" - keep
   this hook treatment (two screen zooms with marks, a punch-in with one keyword pop, an fvp graphic, a split, the
   riser into the join). Body pacing not reviewed yet (only two sample beats were built).
+- 2026-10-06, AI Practitioners Summit talk ("YTHD60 - Pro Edit v1", 37 min): the brief - "the video has already been
+  cut, so do not cut it any further; the length is perfect ... make this look a bit more polished, as if a
+  professional video editor worked on this." Reused the current timeline as the clean cut (no foundation cut, no
+  re-cut, nothing on V1/A1 changed but one punch-in). Reaction to the result: not given yet.
+- 2026-10-13, Harness Engineering ("YTHD60 - Pro Edit v1", 16 min): the brief - lots of theory without on-screen
+  visuals, so "think like a professional video editor and add B-roll" wherever it drags: visualisations of how things
+  work (the software factory swarm, task ingestion and allocation), real articles with highlighted text, screenshots
+  of his own YouTube videos, official logos; don't re-cut. Built with 27 graphics and 34 zooms (far denser than the
+  default body). Mid-run feedback: "doing a really good job so far"; prefers few long-lived subagents over many small
+  ones; fixed the Skool page's wrong weekday after the fact check flagged it. Reaction to the finished timeline: not
+  given yet.
+  Follow-up the same day: the split's head pop-out "glitchy around my ear" (u2net grabbing the guitar) -> RVM matte;
+  hook music "very boring, go for something more inspirational" -> a generated track (music_gen.py); SFX "bland and
+  generic" -> a royalty-free sample library with highlight swishes, dings, whooshes and stings; keyword pops: the
+  yellow serif "not professional for a tech channel", a white chip "not sure it matches the channel brand", then the
+  graphite-glass chip from his design system: "Now that looks cool. Lock in that design."
+  After the brand pass, the RVM split, the library SFX and the generated hook music (ACE-Step cand_1, 15 LU under the
+  voice), watching the 1080p review render: "Wow, this looks next level. The masking around my hair is fixed. Editing
+  seems polished, sound effects seem better and the music sounds cool." - this is the baseline for the next edit.
+  Then, listening to all four music takes on their own, he swapped my pick (cand_1, indie electronic with guitar and
+  marimba) for **cand_3, uplifting cinematic piano + staccato strings + steady drums**: "That's the one!" - now the
+  default hook style in editing-spec.md section 6. Send the user every take as MP3s, not just the pick.
+  Final verdict on this edit: "really, really professional-looking ... a massive step up from the types of edits you
+  did with the same skill previously. The sound effects, the zooms, and the styles ... very cool." What made the
+  difference, keep doing it: everything styled from the channel's own design system, B-roll wherever theory drags,
+  real recorded SFX placed on every visual event, generated music chosen by the user, RVM for the head pop-out.

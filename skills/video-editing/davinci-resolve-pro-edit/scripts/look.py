@@ -34,7 +34,7 @@ for a in argv:
         cv2.rectangle(img, (int(fx - vw / 2), int(fy - vh / 2)), (int(fx + vw / 2), int(fy + vh / 2)), (255, 80, 255), 6)
         import json
         S = json.load(open('scenes.json')) if os.path.exists('scenes.json') else {'files': {}}
-        win = (S['files'].get(f) or {}).get('pip')
+        win = (S.get('items', {}).get(str(it['v1'])) or {}).get('pip') or (S['files'].get(f) or {}).get('pip')
         if win:     # what the held-still PiP will cover in this zoomed view (keep targets out of the red box)
             px, py, pw, ph = [v * kfit for v in win]
             sx0, sy0 = fx + (px - C.TW / 2) / (k * kfit), fy + (py - C.TH / 2) / (k * kfit)

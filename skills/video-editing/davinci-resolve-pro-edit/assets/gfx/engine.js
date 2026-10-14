@@ -53,15 +53,39 @@
   const cards = cfg.cards || [];
   const cardById = {};
   const world = $('world');
-  const RADIUS = { media: (w) => Math.round(w * 0.03), doc: () => 40, tile: () => 72, phone: () => 84, capture: () => 36, logo: () => 0, plain: () => 0 };
-  const SHADOW = '0 60px 120px rgba(24,24,32,.16), 0 24px 48px rgba(24,24,32,.10), 0 4px 10px rgba(24,24,32,.06)';
+  /* theme: 'stage' (default) = the channel's design system (graphite stage, glass, white paper for product UI,
+     Figtree, azure/ember accents); 'paper' = the old bright white world. */
+  const THEME = cfg.theme || window.GFX_THEME || 'stage';
+  const STAGE = THEME === 'stage';
+  const ACC = { azure: [47, 149, 255], ember: [255, 138, 91], iris: [156, 124, 255], mint: [79, 214, 160] }[cfg.accent || 'azure'] || [47, 149, 255];
+  const RADIUS = STAGE
+    ? { media: () => 22, doc: () => 24, paper: () => 24, window: () => 22, glass: () => 28, tile: () => 28, phone: () => 56, capture: () => 22, logo: () => 0, plain: () => 0 }
+    : { media: (w) => Math.round(w * 0.03), doc: () => 40, paper: () => 40, window: () => 32, glass: () => 40, tile: () => 72, phone: () => 84, capture: () => 36, logo: () => 0, plain: () => 0 };
+  const SHADOW = STAGE ? '0 34px 80px -24px rgba(0,0,0,.8)'
+    : '0 60px 120px rgba(24,24,32,.16), 0 24px 48px rgba(24,24,32,.10), 0 4px 10px rgba(24,24,32,.06)';
+  const SHADOW_WINDOW = STAGE ? '0 60px 140px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.08)' : SHADOW;
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  function skin(el, c) {
+    /* glass: frosted stage-800 over the wave, a white hairline, the panel shadow; highlight = accent hairline + bloom */
+    if (c.kind === 'glass') {
+      el.style.background = c.bg || 'rgba(24,25,28,.62)';
+      el.style.backdropFilter = el.style.webkitBackdropFilter = 'blur(24px) saturate(140%)';
+      el.style.border = '1px solid ' + (c.highlight ? rgba(ACC, 0.4) : 'rgba(255,255,255,.09)');
+      el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.06), ' + (c.highlight ? `0 0 110px -30px ${rgba(ACC, 0.8)}, ` : '') + '0 50px 120px -40px rgba(0,0,0,.85)';
+      el.style.color = '#fff';
+      return;
+    }
+    el.style.background = c.bg || '#fff';
+    el.style.boxShadow = (c.kind === 'window' || c.kind === 'capture' || c.kind === 'media') ? SHADOW_WINDOW : SHADOW;
+    if (STAGE && !c.html) el.style.color = '#111214';
+  }
   for (const c of cards) {
     const el = document.createElement('div');
     el.className = 'card ' + (c.kind || 'plain');
     el.id = 'card-' + c.id;
     const r = c.radius != null ? c.radius : (RADIUS[c.kind] || RADIUS.plain)(c.w);
     Object.assign(el.style, { left: c.x - c.w / 2 + 'px', top: c.y - c.h / 2 + 'px', width: c.w + 'px', height: c.h + 'px', borderRadius: r + 'px' });
-    if (c.kind !== 'logo' && c.kind !== 'plain') { el.style.background = c.bg || '#fff'; el.style.boxShadow = SHADOW; }
+    if (c.kind !== 'logo' && c.kind !== 'plain') skin(el, c);
     if (c.clip !== false && c.kind !== 'logo') el.style.overflow = 'hidden';
     if (c.img) {
       const im = document.createElement('img'); im.src = c.img; im.id = 'img-' + c.id; im.className = 'footage';
@@ -142,7 +166,36 @@
   const reveals = (cfg.reveals || []).map((r) => ({ ...r, el: $(r.el) }));
 
   /* ---------- per-frame render ---------- */
+  /* the stage's horizon wave (Leon YouTube design system, Stage.jsx paintWave), a pure function of time */
+  const waveC = $('wave'), waveX = waveC ? waveC.getContext('2d') : null;
+  const WAVE = Object.assign({ level: 'low', k: 1, t0: 0 }, cfg.wave || {});
+  const LEVELS = { low: [880, 0.7], middle: [800, 0.85], high: [740, 1] };
+  function paintWave(t) {
+    if (!waveX || cfg.wave === false) return;
+    const ctx = waveX, rgb = ACC, k = WAVE.k, [base, amp] = LEVELS[WAVE.level] || LEVELS.low;
+    const W = 1920, H = 1080, S = 12, cols = Math.ceil(W / S) + 1;
+    const tint = (a) => 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + Math.min(a * k, 1) + ')';
+    const tops = [];
+    for (let i = 0; i < cols; i++) { const x = i * S + S / 2;
+      tops.push(base + amp * (70 * Math.sin(x * 0.0031 + t * 0.22) + 34 * Math.sin(x * 0.0087 - t * 0.37) + 16 * Math.sin(x * 0.019 + t * 0.61))); }
+    ctx.clearRect(0, 0, W, H); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    [[120 * amp, 0.03], [56 * amp, 0.05], [18 * amp, 0.09]].forEach(([width, alpha]) => {
+      ctx.beginPath();
+      for (let i = 0; i < cols; i++) { const x = i * S + S / 2; if (i) ctx.lineTo(x, tops[i]); else ctx.moveTo(x, tops[i]); }
+      ctx.lineWidth = width; ctx.strokeStyle = tint(alpha); ctx.stroke(); });
+    const first = tops.map((y) => Math.ceil(y / S)), rows = Math.ceil(H / S), depth = rows - Math.min.apply(null, first);
+    for (let d = 0; d < depth; d++) {
+      const rad = d === 0 ? 2.2 : d === 1 ? 1.8 : 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < cols; i++) { const row = first[i] + d; if (row >= rows) continue;
+        const x = i * S + S / 2, y = row * S + S / 2; ctx.moveTo(x + rad, y); ctx.arc(x, y, rad, 0, 6.2832); }
+      ctx.fillStyle = d === 0 ? tint(0.95) : d === 1 ? tint(0.45) : 'rgba(255,255,255,' + Math.min(Math.max(0.08, 0.2 - d * 0.004) * k, 1) + ')';
+      ctx.fill();
+    }
+  }
+
   function render(t) {
+    paintWave(WAVE.t0 + t);
     const cam = camAt(t), camp = camAt(Math.max(0, t - 1 / RFPS));
     world.style.transform = `translate(${anchor[0] - cam.s * cam.x}px,${anchor[1] - cam.s * cam.y}px) scale(${cam.s})`;
     const { h, prev, since } = heroAt(t);
@@ -212,7 +265,7 @@
             target.style.transform = `translate(${Tx2}px,${Ty2}px) scale(${S2})`;
             target.style.filter = `blur(${(40 / S2).toFixed(2)}px) saturate(.7) brightness(1.05)`;
             target.style.opacity = bo;
-            $('bd-wash').style.opacity = bo * 0.72;
+            $('bd-wash').style.opacity = bo * (STAGE ? 0.84 : 0.72);
           }
         }
       }

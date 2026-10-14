@@ -12,8 +12,10 @@ Contents: [0 Principles](#0-principles) · [1 Foundation cut](#1-the-foundation-
 ## 0. Principles
 - **The recording carries a long-form video.** The viewer came for the speaker and the screen. Every enhancement must
   help them see what is being talked about, or (in the hook only) pull them in. If a beat only decorates, drop it.
-- **Hook loud, body quiet.** The hook may be as energetic as a short. After it, restraint: no music, no keyword pops,
-  no layout gymnastics - just the right zoom, highlight, source or card at the right word.
+- **Hook loud, body visual.** The hook may be as energetic as a short. The body keeps moving too: the viewer is
+  constantly SHOWN what is being said - a zoom with a highlight, the real article or page, an explainer graphic, a
+  logo, the speaker's own video - so theory never sits on a static slide. No music, no keyword pops and no layout
+  gymnastics after the hook: the energy comes from showing, not from decoration.
 - **Real over invented.** Anything that happened (a release, a number, a quote, pricing, a benchmark, a docs
   statement) is shown as its real source: the real page, the real UI, the real numbers from the recording.
 - **Animate the action, never label it.** No pills, chips or text rows restating the narration.
@@ -45,14 +47,23 @@ transition on that cut, hook_end is the cut in the middle of the transition.
 - Music under the whole hook (section 6). The riser lands exactly on hook_end.
 - Up to three whips (whoosh) in the hook.
 
-**The body (hook_end -> end): restraint.**
-- The plain recording is the default. A beat appears when the viewer needs help seeing something: a UI control
-  being clicked, a number, a line of code or prompt being read, a setting, a result, a page the speaker cites.
-- Density: about one beat per 20-40 s, following the content, not a quota. Tutorial stretches with lots of clicking
-  can have more; talk-only stretches may have none. Never two graphics back to back without the recording between
-  them.
+**The body (hook_end -> end): always showing something.** (The standard since the Harness Engineering edit, which
+Leon called "energetic... things move... constantly showing examples and B-roll... phenomenal".)
+- Every stretch gets the visual that helps most: a zoom with marks on the slide, code or UI being talked about; the
+  REAL source (article, docs, X post, pricing page, repo) at every citation, with the cited line highlighted; an
+  explainer graphic wherever the speaker explains how something works (a system, a flow, a comparison, a number);
+  official logos when products are named; the speaker's own YouTube watch page / thumbnail at every "I have a video on".
+- Density, measured on that edit (16 min, mostly slides and theory): 34 zooms + 27 graphics + 4 CTA cards in a
+  15-minute body - a new visual beat about every 14 s, and about 80% of the runtime covered by a zoom or a graphic.
+  Aim for that on theory and slides: no static slide or plain talking head for more than ~30 s unless the plain
+  shot is genuinely the best view (a personal story told to camera, a demo where the full screen is clearer).
+- Explainers are the heart of it: the processes the speaker describes in words (here the software-factory swarm,
+  task ingestion and allocation to agents, the harness levels, context budgets) become animated diagrams in the
+  channel's style, cued word by word. One continuous "world" may span two graphics back to back (an invisible cut);
+  otherwise the recording or a zoom sits between graphics.
 - No music. No keyword pops. No splits. A whip (with its whoosh) only into or out of a full-visual resource, at
-  most one every couple of minutes.
+  most one every couple of minutes. Sound design follows every visual event (section 6): highlight swishes on
+  marks, dings on boxes, a soft whoosh into each graphic.
 - CTA cards whenever the speaker points to the community, a download or a link (section 3).
 
 ## 3. The beats
@@ -68,13 +79,15 @@ words: a move starts 0.25 s before the word that names its target; a mark lands 
 - Frame targets so they stay clear of the webcam: in every zoom and every screen-scene graphic the PiP is held still
   exactly where V1 has it. `look.py --zoom k,fx,fy` shows the view (magenta) and what the PiP will cover (red).
 - Marks (at most one or two on screen at once, on the word, gone when the talk moves on):
-  - `box`: a clay outline for a control, button, menu item or value. Lands with a small settle.
-  - `band`: a marker-pen sweep for a line of text, a row or a number being read. A clay wash on dark UI and a
-    multiply tint on light pages, chosen automatically.
+  - `box`: an accent outline (azure, `config.MARK`) with a soft accent glow, for a control, button, menu item or
+    value. Lands with a small settle.
+  - `band`: a marker-pen sweep for a line of text, a row or a number being read. An accent wash on dark UI and a
+    soft blue multiply tint on light pages, chosen automatically.
   - `spot`: dims everything else (45%) to isolate a region on a busy screen.
-  - `underline`: a sweeping clay bar under a phrase in a paragraph.
+  - `underline`: a sweeping accent bar under a phrase in a paragraph.
 - A beat never crosses a V1 title, generator or transition the editor added, and stays inside one scene.
-- SFX: nothing on the moves. A `click` only where the recording shows a real press.
+- SFX: nothing on the moves. A highlight swish when a band or underline sweeps, a soft ding when a box lands (not
+  when marks come within 0.7 s of each other), a `click` only where the recording shows a real press.
 
 **punch - static punch-in on camera items (hook and body).** Full-frame camera shots only.
 - A static zoom (1.10-1.20) on the V1 item itself, with the eyes on ~38% of the frame height and the face's x kept.
@@ -99,14 +112,29 @@ words: a move starts 0.25 s before the word that names its target; a mark lands 
 - Length: the phrase it illustrates, typically 4-10 s. Frame 0 is the landing state (content visible, camera at
   rest), because it hard-cuts in.
 
-**words - keyword pops (hook only).** 1-3 words, Poppins Bold 80 white with an 8 px black stroke; a highlight
-(the key word) in Instrument Serif italic 96, pure yellow #FFFF00, 9 px black stroke. Centre (960, 905), lower
-third, clear of the face and of any graphic text. Pops in over 0.18 s (scale 0.86 -> 1), holds for the phrase,
-fades over 0.14 s.
+**words - keyword pops (hook only). LOCKED DESIGN (user-approved 2026-10-13): the channel's own slide system.**
+Leon's slides follow the "Leon YouTube" design system (`C:\cognaitiv-ai\design-system\leon-youtube`: graphite stage,
+Figtree, Geist Mono labels, azure #2F95FF primary accent, ember #FF8A5B second - the orange dot of the cognaitiv logo on
+his shirt). A keyword pop is a small piece of that system:
+- a graphite glass chip: fill stage-800 rgb(24,25,28) at ~88% (more opaque than the slides' 62% glass, since an alpha
+  overlay can't blur what is under it), radius 28 (the panel radius), a 1.5 px accent hairline (accent at ~33%), a
+  1 px white top highlight at ~9%, the long panel shadow (0 50 120 -40, black ~78%) and the highlighted-panel bloom
+  (accent at ~60%, blur ~46 px, inset 30 px);
+- the words in Figtree 600 white at 62 layout px, tracking -0.025em (the title tracking), kerning kept, padding 40 x 26;
+- beneath them the accent line (5 px, radius 3, with a soft glow), below the descenders, drawn left to right 0.10 s
+  after the landing over 0.40 s (power3.out); azure by default, `"accent": "ember"` for costs/warnings or variety;
+- optional `"label"`: a Geist Mono 500 uppercase eyebrow (18 px, 0.14em tracking, text-muted #7E818A) above the words.
+Centre (960, 905), lower third, clear of the face and of any graphic text. Lands over 0.26 s (scale 0.96 -> 1, rising
+12 px, power3.out), holds for the phrase, fades over 0.18 s. SFX: a soft pop on the landing and a highlight swish as
+the line draws. Fonts ship in `assets/fonts` (Figtree-VF.ttf, GeistMono-VF.ttf, both OFL). Rejected: yellow
+Instrument Serif italic with a black stroke ("not professional for a tech channel"), and a white chip with a clay
+highlighter ("not sure it matches the channel brand").
 
-**cta - the community card (body).** The long-form version of the shorts' comment box: a white card at the bottom
-left with the spec shadow, an avatar or logo, a one-line label, the URL typed with a clay caret starting on the
-word that names the place, then a clay button press. 4-6 s. Pop on landing, key ticks while typing, click on the
+**cta - the community card (body).** The long-form version of the shorts' comment box, in the channel's design
+system: a graphite glass card (stage-800 at ~96%, white hairline and top highlight, radius 28, the long panel shadow)
+at the bottom left, the avatar in a circle, a Geist Mono uppercase label (muted), the URL typed in Figtree 600 white
+with an azure caret starting on the word that names the place, then an azure button (with a soft glow) that darkens
+to azure-ink on the press. 4-6 s. Pop on landing, key ticks while typing, click on the
 press. Use the user's real URLs (skool.com/leonvanzyl for the free community, skool.com/agentic-labs for Agentic
 Labs) unless the video names another.
 
@@ -124,13 +152,27 @@ Layout px are 1920x1080; renders are made at the timeline's resolution (x2 on UH
 - **Keyword pops** centre (960, 905). **CTA card** x 64, y 836, 900x176.
 
 ## 5. Graphics style
-Luxury tech: one bright world of floating white cards, and a camera that moves through it (the shorts' engine,
-generalised to 16:9 - `references/graphics.md`).
-- Ground: radial near-white (#FFFFFF at 50%/36%, #F3F3F0 at the edges). No grid, no orbs, nothing dark except real UI.
-- Shadow on every card: 0 60px 120px rgba(24,24,32,.16), 0 24px 48px rgba(24,24,32,.10), 0 4px 10px rgba(24,24,32,.06).
-  Radii: media 3% of the width, docs 40, tiles 72, phones 84, captures 32.
-- Type: Poppins. Headline 88/700, subhead 52/700, body 30/400; nothing under 30 px. Ink #111111. Clay #D97757 for
-  fills, #B25730 for clay text on white, highlight band #FBEEE8, green #34C759 for checks, red #FF3B30 for stamps.
+**The channel's own design system** ("Leon YouTube", `C:\cognaitiv-ai\design-system\leon-youtube` - read its
+`readme.md` and tokens before designing anything new): his slides are a product keynote on a graphite stage, and the
+B-roll is that deck come alive. The engine's default `theme: 'stage'` paints it (`references/graphics.md`); the old
+bright white world (`theme: 'paper'`) was rejected for this channel ("it needs to be done right", 2026-10-13).
+- Ground: the stage - stage-800 #18191C fading to stage-950 #0B0C0E under a soft overhead spotlight, two faint light
+  beams, the animated horizon WAVE of dots glowing in the accent (Stage.jsx `paintWave`, time-driven), a vignette.
+- Surfaces: `glass` panels for explanations and diagrams (stage-800 at 62% + 24 px backdrop blur, white hairline,
+  inset top highlight, shadow 0 50 120 -40 black 85%; one `highlight` per scene = accent hairline + bloom); white
+  `window`/`paper` for real product UI, chats, files, issues, repos and captures (window radius 22, card 24, the
+  dark window/card shadows). No glass inside glass, no paper inside glass.
+- Type: Figtree 600 (display 140 -0.035em, headline 96 -0.03em, statements 54 -0.025em), Figtree 500 accent
+  subtitle (46), body 30 in text-secondary #A3A6AD, Geist Mono uppercase labels (22, 0.14em, muted #7E818A, parts
+  joined by a middle dot), code in Geist Mono with the code token colours. Nothing under 22 px on the stage; pills
+  on paper may go to 14. Tabular numerals.
+- Colour: one accent per scene - azure #2F95FF (default) or ember #FF8A5B (costs, security, warnings, refusals);
+  mint #4FD6A0 for passes and checks; iris only on icon tiles. Winners white or accent, losers text-secondary.
+  Status on paper as pills (azure/mint/ember wash + ink). No clay, no pure red, no Poppins.
+- Personality: the design system's glossy 3D icon tiles (`tile_html`: azure code, iris bolt, mint eyes/check, ember
+  bars) and real product logos on paper chips or glass tiles.
+- Layout: the webcam lane stays clear (content left of x 1504 in `fvp`); text on the bare stage ends above y≈780
+  (the wave's crest glows lower) - anything lower sits on glass or paper.
 - Camera: glide (sine.inOut, scale change <= 0.04), step (0.5 s power3.inOut, 0.25 s before the word), push
   (1.2-2 s power2.inOut, up to ~1.6x), pull (1-2 s), at most one whip per graphic (0.45 s out power3.in, 0.6 s in
   power3.out). While a product window is the subject only its inner camera moves (1.15-1.4x, 0.4-0.7 s).
@@ -141,22 +183,35 @@ generalised to 16:9 - `references/graphics.md`).
 - Sparse scenes: one dominant subject, at most one supporting cue, smooth eased motion, never frantic.
 
 ## 6. Audio
-All synthesized in code (`scripts/audio.py`), clean, modern and premium, never cartoony. Levels are baked into the
-files, because Resolve's scripting API cannot set clip volume.
+Real recorded sounds from the royalty-free SFX library (the skill's `assets/sfx`, built by `sfx_library.py`,
+licences in its manifest; `sfxlib.py` rotates the recommended picks and lands each sound on its onset or, for
+whooshes and risers, its peak), synthesized stand-ins only when the library is missing. Clean, modern and premium,
+never cartoony. Levels are baked into the files, because Resolve's scripting API cannot set clip volume. The user
+found synthesized SFX "bland and generic" (2026-10-13).
 - **Voice:** the timeline's own A1, untouched. Levels below are measured against its robust peak (the 99th
   percentile of 100 ms peaks) and its hook loudness.
-- **SFX**, one per meaningful visible event: a soft bubbly click on real presses, a key tick run on typing, a dull
-  pop when a card lands, a two-note chime on an answer or confirmation, a low airy whoosh whose loudest moment lands
-  exactly on the whip midpoint (whips only; rotate the four variants). Nothing on zooms, punch-ins, steps, pushes,
-  glides or cuts. Peaks vs the voice: click, pop, chime -10 dB; whoosh -9 dB; keys and ticks -16 dB.
-- **Riser:** a 2.6 s low swell whose audible end lands exactly on hook_end, -12 dB. The one sound allowed to rise
+- **SFX**, one per meaningful visible event: a real click on presses, key ticks on typing (single-key samples, one
+  per character), a soft pop when a card lands, a success chime on an answer or confirmation, a marker swish when a
+  highlight band or underline sweeps (zoom marks, graphic reveals, the keyword pop's accent line), a soft bell ding
+  when a box mark lands, a soft whoosh peaking on the cut into each full-visual graphic (not between two graphics of
+  one continuous world), a whoosh on the whip midpoint, and a tasteful hit (sting) on hook_end. A highlight or ding
+  never stacks within 0.15 s of another event. Nothing on zooms' camera moves, punch-ins, steps, pushes or glides.
+  Peaks vs the voice (library): click, pop -14 dB; chime -12; whoosh -12 (into graphics -17); highlight, ding -16;
+  sting -10; keys -20. `auto_sfx: false` in the plan turns the derived events off.
+- **Riser:** the library's riser (cut right after its peak) or a 2.6 s synthesized swell, landing exactly on
+  hook_end, -12 dB. The one sound allowed to rise
   into a cut.
-- **Music - the hook only.** Synthesized for this video (never a repeat: the seed comes from the timeline name).
-  Pick the style that fits the topic and energy - lofi (the default for talking-head tech), chillhop (relaxed
-  how-tos), ambient (serious or reflective), synthwave (retro, hype), upbeat house (launches and wins) - and a mood
-  (warm or moody). A low-passed intro, the beat drops at the end of the hook's first sentence, ~18 LU under the
-  hook's voice, sidechain-ducked ~5 dB under speech, and it **fades out over 2-3 s starting at hook_end**. Nothing
-  after that: long-form viewers tire of a bed under a tutorial.
+- **Music - the hook only, generated for this video** (`music_gen.py`, ACE-Step 1.5 XL; a new seed per video, never
+  a repeat). Leon's pick (Oct 2026, over indie-electronic, felt-piano-pop and electronic-pop takes): **uplifting
+  cinematic** - "uplifting cinematic instrumental, opens with a solo emotional piano ostinato and soft pads with no
+  drums, then pulsing staccato strings, warm bass and a steady driving modern drum groove enter, hopeful and inspiring,
+  warm, documentary style, not an epic trailer", ~105 bpm, structure "[Intro - solo piano ostinato, quiet, no drums, no
+  bass] [Build - strings, bass and drums enter] [Main Theme - full drums, driving, inspiring] ...". Generate 3-4 takes
+  (this style first, plus a contrast or two), keep the ones with a soft intro that lifts and no vocals, and let the user
+  choose by ear. The synthesized beds (`music.py`: lofi, chillhop, ambient, synthwave, house) are the fallback - Leon
+  called the chillhop one "very boring". Soft intro, the lift lands at the end of the hook's first sentence (`drop`),
+  15 LU under the hook's voice (`under_voice_lu`), ducked ~5 dB more under speech, and it **fades out over 2-3 s
+  starting at hook_end**. Nothing after that: long-form viewers tire of a bed under a tutorial.
 - **Final loudness** is set on delivery: the added layers are levelled against the voice, so normalising the whole
   mix to -14 LUFS (YouTube) in Deliver keeps the balance. Say so in the report.
 

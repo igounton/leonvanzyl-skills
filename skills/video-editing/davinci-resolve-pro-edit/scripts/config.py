@@ -28,4 +28,8 @@ YUNET = 'models/face_detection_yunet_2023mar.onnx'
 LANDMARKER = 'models/face_landmarker.task'
 
 INK = (17, 17, 17); CLAY = (217, 119, 87); CLAY_T = (178, 87, 48); HL_YELLOW = (255, 255, 0)
+# the channel brand (Leon YouTube design system): marks, CTA and keyword pops use these
+AZURE = (47, 149, 255); AZURE_INK = (21, 96, 208); EMBER = (255, 138, 91); MINT = (79, 214, 160)
+STAGE800 = (24, 25, 28); TEXT_MUTED = (126, 129, 138); TEXT_2 = (163, 166, 173)
+MARK = tuple(_cfg.get('mark_color', AZURE))                 # zoom marks (box, band, underline)
 SHADOW = [(60, 120, .16), (24, 48, .10), (4, 10, .06)]    # (dy, blur, alpha) in layout px: the spec's three-layer shadow

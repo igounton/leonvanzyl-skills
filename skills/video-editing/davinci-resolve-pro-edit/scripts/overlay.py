@@ -1,8 +1,8 @@
 """Alpha overlays for the top video track (ProRes 4444 with alpha, timeline resolution), drawn in code:
 
-  words  hook keyword pop: 1-3 words, Poppins Bold white with a black stroke, or - for a highlight - Instrument Serif
-         italic in pure yellow. Pops in over 0.18 s, holds, fades out.  (hook only; the body gets none)
-         {"id": "w02", "kind": "words", "t0": 6.10, "t1": 7.35, "text": "half the cost", "hl": true, "xy": [960, 905]}
+  words  hook keyword pop in the channel's slide style: a graphite glass chip, Figtree 600 white, the accent line
+         drawn in beneath (azure, or "accent": "ember"), an optional Geist Mono "label" eyebrow. (hook only)
+         {"id": "w02", "kind": "words", "t0": 6.10, "t1": 7.35, "text": "half the cost", "accent": "azure", "xy": [960, 905]}
   cta    lower-third community card: avatar or logo, a label, the URL typed with a clay caret, then a button press.
          {"id": "c01", "kind": "cta", "t0": 118.2, "t1": 124.6, "url": "skool.com/leonvanzyl",
           "label": "Free AI builder community", "button": "Join", "type_at": 0.9, "logo": "gfx/assets/skool.png"}
@@ -58,39 +58,101 @@ def place(canvas, im, cx, cy, scale=1.0, alpha=1.0):
 
 
 # ------------------------------------------------------------------ keyword pops
-def words_img(text, hl):
-    f = font('InstrumentSerif-Italic.ttf', 96) if hl else font('Poppins-Bold.ttf', 80)
-    stroke = int(round((9 if hl else 8) * U)); pad = stroke * 3
+# The channel's slide system ("Leon YouTube" design system): a graphite glass chip (stage-800 fill, white hairline,
+# top highlight, the long panel shadow, the highlighted-panel accent hairline + bloom), Figtree 600 white at the
+# title tracking, and the accent line drawn in beneath the words. Accent azure #2F95FF by default, ember #FF8A5B
+# with "accent": "ember" (the cognaitiv orange). An optional Geist Mono eyebrow ("label") sits above the words.
+ACCENTS = {'azure': (47, 149, 255), 'ember': (255, 138, 91), 'iris': (156, 124, 255), 'mint': (79, 214, 160)}
+WORDS_SIZE, WORDS_TRACK = 62, -0.025                       # layout px, em
+WORDS_PADX, WORDS_PADY, WORDS_SHPAD, WORDS_RADIUS = 40, 26, 170, 28
+GLASS = (24, 25, 28, 224)                                  # stage-800; more opaque than the slides' 62%: no backdrop blur here
+SWEEP_T0, SWEEP_DUR = 0.10, 0.40                           # the accent line draws in just after the chip lands
+
+
+def vfont(name, size, weight):
+    f = ImageFont.truetype(C.FONTS + name, int(round(size * U)))
+    try: f.set_variation_by_axes([weight])
+    except Exception: pass
+    return f
+
+
+def tracked(draw, xy, text, f, fill, track_em):
+    """text with letter-spacing, keeping the font's kerning (advance = width of the prefix difference)"""
+    x, y = xy; extra = track_em * f.size; prev = 0.0
+    for i, ch in enumerate(text):
+        draw.text((x + prev + i * extra, y), ch, font=f, fill=fill)
+        prev = f.getlength(text[:i + 1])
+    return prev + extra * (len(text) - 1)
+
+
+def words_parts(b):
+    """(chip with shadow + bloom, text layer, accent-line rect, accent colour) - drawn once per beat"""
+    text = b['text']; acc = ACCENTS.get(b.get('accent', 'azure'), ACCENTS['azure'])
+    f = vfont('Figtree-VF.ttf', WORDS_SIZE, 600)
     d0 = ImageDraw.Draw(Image.new('L', (1, 1)))
-    gap = d0.textlength(' ', font=f) + 10 * U                  # wider than the stroke, so spaces survive
-    ws = text.split(); tw = sum(d0.textlength(w, font=f) for w in ws) + gap * (len(ws) - 1)
-    asc, desc = f.getmetrics()
-    im = Image.new('RGBA', (int(tw + 2 * pad), int(asc + desc + 2 * pad)), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    x = pad
-    for w in ws:
-        if hl:
-            d.text((x, pad), w, font=f, fill=C.HL_YELLOW + (255,), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-            d.text((x, pad), w, font=f, fill=C.HL_YELLOW + (255,), stroke_width=max(1, int(2 * U)), stroke_fill=C.HL_YELLOW + (255,))
-        else:
-            d.text((x, pad), w, font=f, fill=(255, 255, 255, 255), stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
-        x += d0.textlength(w, font=f) + gap
-    return im
+    tw = f.getlength(text) + WORDS_TRACK * f.size * (len(text) - 1)
+    asc, desc = f.getmetrics(); cap = f.getbbox('H')[3] - f.getbbox('H')[1]
+    label = b.get('label'); lf = vfont('GeistMono-VF.ttf', 18, 500) if label else None
+    lh = (lf.getbbox('A')[3] + 14 * U) if label else 0
+    dsc = f.getbbox('gjpqy')[3] - f.getbbox('H')[3]           # descender depth below the baseline
+    line_gap, line_h = dsc + 14 * U, 5 * U
+    cw = tw + 2 * WORDS_PADX * U
+    ch = WORDS_PADY * U + lh + cap + line_gap + line_h + WORDS_PADY * U
+    sp = WORDS_SHPAD * U; size = (int(cw + 2 * sp), int(ch + 2 * sp)); box = (sp, sp, sp + cw, sp + ch); r = int(WORDS_RADIUS * U)
+    base = Image.new('RGBA', size, (0, 0, 0, 0))
+
+    def soft(rect, rgba, blur):                             # a blurred rounded rect (shadow / bloom)
+        m = Image.new('L', size, 0); ImageDraw.Draw(m).rounded_rectangle(rect, r, fill=255)
+        m = m.filter(ImageFilter.GaussianBlur(blur))
+        lay = Image.new('RGBA', size, rgba[:3] + (0,)); lay.putalpha(m.point(lambda v: int(v * rgba[3] / 255)))
+        return lay
+    x0, y0, x1, y1 = box
+    base = Image.alpha_composite(base, soft((x0 + 40 * U, y0 + 90 * U, x1 - 40 * U, y1 + 50 * U), (0, 0, 0, 200), 50 * U))   # 0 50 120 -40 shadow
+    base = Image.alpha_composite(base, soft((x0 + 30 * U, y0 + 30 * U, x1 - 30 * U, y1 - 30 * U), acc + (150,), 46 * U))      # accent bloom
+    d = ImageDraw.Draw(base)
+    d.rounded_rectangle(box, r, fill=GLASS)
+    d.rounded_rectangle(box, r, outline=acc + (84,), width=max(1, int(1.5 * U)))                                              # accent hairline
+    d.line((x0 + r, y0 + 1.5 * U, x1 - r, y0 + 1.5 * U), fill=(255, 255, 255, 22), width=max(1, int(1 * U)))               # top highlight
+    txt = Image.new('RGBA', size, (0, 0, 0, 0)); dt = ImageDraw.Draw(txt)
+    ty = y0 + WORDS_PADY * U + lh
+    if label:
+        tracked(dt, (x0 + WORDS_PADX * U, y0 + WORDS_PADY * U - lf.getbbox('A')[1]), label.upper(), lf, (126, 129, 138, 255), 0.14)
+    tracked(dt, (x0 + WORDS_PADX * U, ty - (asc - cap) + 0 * U - f.getbbox('H')[1] + (asc - cap)), text, f, (255, 255, 255, 255), WORDS_TRACK)
+    ly = ty + cap + line_gap
+    line = (x0 + WORDS_PADX * U, ly, x0 + WORDS_PADX * U + tw, ly + line_h)
+    return base, txt, line, acc
 
 
 def words_state(b, t):
     dur = b['t1'] - b['t0']
-    pin = min(1.0, t / 0.18); pout = min(1.0, max(0.0, (dur - t) / 0.14))
-    return None if (pin <= 0 or pout <= 0) else (pin, pout)
+    pin = min(1.0, t / 0.26); pout = min(1.0, max(0.0, (dur - t) / 0.18))
+    if pin <= 0 or pout <= 0: return None
+    sw = min(1.0, max(0.0, (t - SWEEP_T0) / SWEEP_DUR))
+    return (round(pin, 3), round(pout, 3), round(M.ease('power3.out')(sw), 3))
 
 
 def words_draw(b, state, cache):
-    if 'img' not in cache: cache['img'] = words_img(b['text'], b.get('hl', False))
-    pin, pout = state
+    if 'parts' not in cache: cache['parts'] = words_parts(b)
+    base, txt, line, acc = cache['parts']
+    pin, pout, sw = state
     e = M.ease('power3.out')(pin)
+    im = Image.alpha_composite(base, txt)
+    if sw > 0:                                             # the accent line, with a soft glow, drawn left to right
+        x0, y0, x1, y1 = line; xe = x0 + (x1 - x0) * sw
+        glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((x0, y0, xe, y1), int(3 * U), fill=255)
+        glow = glow.filter(ImageFilter.GaussianBlur(7 * U))
+        gl = Image.new('RGBA', im.size, acc + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.8)))
+        im = Image.alpha_composite(im, gl)
+        ImageDraw.Draw(im).rounded_rectangle((x0, y0, xe, y1), int(3 * U), fill=acc + (255,))
     cx, cy = b.get('xy', [960, 905])
     canvas = np.zeros((C.TH, C.TW, 4), np.float32)
-    place(canvas, cache['img'], cx * U, cy * U, (0.86 + 0.14 * e) * (0.97 + 0.03 * pout), min(1.0, pin * 2) * pout)
+    place(canvas, im, cx * U, (cy + 12 * (1 - e)) * U, (0.96 + 0.04 * e) * (0.98 + 0.02 * pout), min(1.0, pin * 1.6) * pout)
     return canvas
+
+
+def words_events(b):
+    """a soft landing and the accent line drawing in (audio.py maps the types to the SFX library)"""
+    return [dict(t=round(b['t0'] + 0.02, 3), type='pop'), dict(t=round(b['t0'] + SWEEP_T0, 3), type='highlight')]
 
 
 # ------------------------------------------------------------------ community CTA card
@@ -98,25 +160,32 @@ CTA_BOX = (64, 836, 900, 176)          # x, y, w, h (layout px): bottom-left, cl
 
 
 def cta_static(b):
-    x, y, w, h = CTA_BOX; r = 44
+    """the card in the channel's design system: graphite glass (stage-800), white hairline + top highlight, the long
+    panel shadow, a Geist Mono label, the URL in Figtree 600 white with an azure caret, an azure button"""
+    x, y, w, h = CTA_BOX; r = 28
     pad = 260                                                    # room for the whole shadow falloff (no clipped edge)
     size = (int((w + 2 * pad) * U), int((h + 2 * pad) * U))
     box = (pad * U, pad * U, (pad + w) * U, (pad + h) * U)
-    im = shadow_layer(size, box, r * U)
+    m = Image.new('L', size, 0)
+    ImageDraw.Draw(m).rounded_rectangle((box[0] + 40 * U, box[1] + 90 * U, box[2] - 40 * U, box[3] + 50 * U), int(r * U), fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(50 * U))
+    im = Image.new('RGBA', size, (0, 0, 0, 0)); im.putalpha(m.point(lambda v: int(v * 0.8)))
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle(box, int(r * U), fill=(255, 255, 255, 255))
+    d.rounded_rectangle(box, int(r * U), fill=C.STAGE800 + (246,))
+    d.rounded_rectangle(box, int(r * U), outline=(255, 255, 255, 34), width=max(1, int(1.5 * U)))
+    d.line((box[0] + r * U, box[1] + 1.5 * U, box[2] - r * U, box[1] + 1.5 * U), fill=(255, 255, 255, 26), width=max(1, int(U)))
     ax, ay, ar = box[0] + 34 * U + 54 * U, box[1] + h * U / 2, 54 * U
     if b.get('logo') and os.path.exists(b['logo']):
         lg = Image.open(b['logo']).convert('RGBA').resize((int(2 * ar), int(2 * ar)), Image.LANCZOS)
         mk = Image.new('L', lg.size, 0); ImageDraw.Draw(mk).ellipse((0, 0, lg.size[0] - 1, lg.size[1] - 1), fill=255)
         im.paste(lg, (int(ax - ar), int(ay - ar)), mk)
+        d.ellipse((ax - ar, ay - ar, ax + ar, ay + ar), outline=(255, 255, 255, 40), width=max(1, int(1.5 * U)))
     else:
-        d.ellipse((ax - ar, ay - ar, ax + ar, ay + ar), fill=(232, 232, 228, 255))
-        d.ellipse((ax - 20 * U, ay - 33 * U, ax + 20 * U, ay + 7 * U), fill=(178, 178, 172, 255))
-        d.pieslice((ax - 38 * U, ay + 11 * U, ax + 38 * U, ay + 84 * U), 180, 360, fill=(178, 178, 172, 255))
+        d.ellipse((ax - ar, ay - ar, ax + ar, ay + ar), fill=(44, 45, 49, 255))
     tx = ax + ar + 28 * U
     if b.get('label'):
-        d.text((tx, box[1] + 38 * U), b['label'], font=font('Poppins-Medium.ttf', 30), fill=(110, 110, 104, 255))
+        lf = vfont('GeistMono-VF.ttf', 18, 500)
+        tracked(d, (tx, box[1] + 40 * U), b['label'].upper(), lf, C.TEXT_MUTED + (255,), 0.14)
     return im, box, tx
 
 
@@ -131,7 +200,7 @@ def cta_state(b, t):
     caret = t < press + 0.12 and blink
     pp = (t - press) / 0.24
     sc = float(1 - 0.08 * np.sin(np.pi * pp)) if 0 <= pp <= 1 else 1
-    col = C.CLAY_T if 0 <= pp <= 1 else C.CLAY
+    col = C.AZURE_INK if 0 <= pp <= 1 else C.AZURE
     return (land, out, n, caret, sc, col)
 
 
@@ -145,19 +214,23 @@ def cta_draw(b, state, cache):
     if 'fb' not in cache:                   # the whole URL must fit left of the button: shrink long URLs (never under 30)
         avail = (box[2] - (40 + 160 + 28) * U if b.get('button') else box[2] - 40 * U) - tx
         size = 44
-        while size > 30 and ImageDraw.Draw(base).textlength(url, font=font('Poppins-Bold.ttf', size)) > avail: size -= 1
-        cache['fb'] = font('Poppins-Bold.ttf', size)
+        while size > 30 and vfont('Figtree-VF.ttf', size, 600).getlength(url) > avail: size -= 1
+        cache['fb'] = vfont('Figtree-VF.ttf', size, 600)
     fb = cache['fb']
-    ty = box[1] + (100 if b.get('label') else 88) * U
-    d.text((tx, ty), url[:n], font=fb, fill=C.INK + (255,), anchor='lm')
+    ty = box[1] + (104 if b.get('label') else 88) * U
+    d.text((tx, ty), url[:n], font=fb, fill=(255, 255, 255, 255), anchor='lm')
     if caret:
-        cw = d.textlength(url[:n], font=fb)
-        d.rounded_rectangle((tx + cw + 5 * U, ty - 28 * U, tx + cw + 10 * U, ty + 28 * U), int(2 * U), fill=C.CLAY + (255,))
+        cw = fb.getlength(url[:n])
+        d.rounded_rectangle((tx + cw + 5 * U, ty - 26 * U, tx + cw + 9 * U, ty + 26 * U), int(2 * U), fill=C.AZURE + (255,))
     if b.get('button'):
         bxc, byc = box[2] - (40 + 80) * U, box[1] + CTA_BOX[3] * U / 2
-        hw, hh = 80 * U * sc, 40 * U * sc
+        hw, hh = 80 * U * sc, 38 * U * sc
+        glow = Image.new('L', im.size, 0); ImageDraw.Draw(glow).rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), int(hh), fill=255)
+        glow = glow.filter(ImageFilter.GaussianBlur(16 * U))
+        gl = Image.new('RGBA', im.size, C.AZURE + (0,)); gl.putalpha(glow.point(lambda v: int(v * 0.55)))
+        im = Image.alpha_composite(im, gl); d = ImageDraw.Draw(im)
         d.rounded_rectangle((bxc - hw, byc - hh, bxc + hw, byc + hh), int(hh), fill=col + (255,))
-        d.text((bxc, byc), b['button'], font=font('Poppins-SemiBold.ttf', 34 * sc), fill=(255, 255, 255, 255), anchor='mm')
+        d.text((bxc, byc), b['button'], font=vfont('Figtree-VF.ttf', 32 * sc, 600), fill=(255, 255, 255, 255), anchor='mm')
     canvas = np.zeros((C.TH, C.TW, 4), np.float32)
     x, y, w, h = CTA_BOX
     cx, cy = (x + w / 2) * U, (y + h / 2 + 40 * (1 - e) + 24 * (1 - out)) * U
@@ -211,7 +284,7 @@ def render(bid, preview=None):
     b = M.beat(bid)
     f0, f1 = M.frames_of(b['t0'], b['t1'])
     os.makedirs(C.MEDIA, exist_ok=True); os.makedirs('preview', exist_ok=True); os.makedirs('events', exist_ok=True)
-    ev = cta_events(b) if b['kind'] == 'cta' else []
+    ev = cta_events(b) if b['kind'] == 'cta' else words_events(b) if b['kind'] == 'words' else []
     json.dump(ev, open(f'events/{bid}.json', 'w'), indent=1)
     fr = Frames(b)
     if preview is not None:

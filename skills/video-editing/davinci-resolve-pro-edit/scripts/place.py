@@ -4,7 +4,7 @@
      --video-tracks / --audio-tracks: how many tracks the DUPLICATED timeline already has (probe it). The edit's own
      tracks go above them: V+1 "PE Graphics" (opaque V2-style clips), V+2 "PE Overlays" (alpha), V+3 "PE Censor"
      (alpha blur over sensitive UI, always topmost), A+1 "PE SFX",
-     A+2 "PE Music", A+3 "PE Riser". Writes placement.json: the tracks to add, the files to import, every clip with
+     A+2 "PE Music", A+3 "PE Riser", A+4/A+5 "PE SFX 2"/"PE SFX 3" (only when SFX overlap). Writes placement.json: the tracks to add, the files to import, every clip with
      its record frame, the punch-in transforms for V1 items and the markers.
 2) python scripts/place.py ids <import_result.json> [--existing-markers <get_all.json>]
      after media_pool safe_import_media: maps each file to its media_pool_item_id and writes
@@ -19,7 +19,8 @@ import sys, os, json
 sys.path.insert(0, 'scripts'); import config as C, media as M
 
 ROLES_V = [('graphics', 'PE Graphics'), ('overlays', 'PE Overlays'), ('censor', 'PE Censor')]   # censor: always on top
-ROLES_A = [('sfx', 'PE SFX'), ('music', 'PE Music'), ('riser', 'PE Riser')]
+ROLES_A = [('sfx', 'PE SFX'), ('music', 'PE Music'), ('riser', 'PE Riser'), ('sfx2', 'PE SFX 2'), ('sfx3', 'PE SFX 3')]   # sfx2/3: SFX that overlap one on PE SFX
+SFX_LANES = ('sfx', 'sfx2', 'sfx3')
 
 
 def punch_transform(it, face, z, src_w, src_h):
@@ -57,6 +58,12 @@ def plan(nv, na):
         clips.append(dict(beat=b['id'], role=role, file=f, media_type=1,
                           track_index=vt[role], record_frame=f0, start_frame=0, end_frame=f1 - f0))
     A = json.load(open('audio_clips.json')) if os.path.exists('audio_clips.json') else {'clips': []}
+    ends = {l: 0 for l in SFX_LANES}                   # greedy: each SFX on the first lane where it does not overlap
+    for c in sorted([c for c in A['clips'] if c['track'] == 'sfx'], key=lambda c: c['record_frame']):
+        lane = next((l for l in SFX_LANES if c['record_frame'] >= ends[l]), None)
+        if lane is None: print(f"  dropping an SFX at frame {c['record_frame']} ({c.get('src')}): all {len(SFX_LANES)} lanes busy"); c['track'] = 'drop'; continue
+        c['track'] = lane; ends[lane] = c['record_frame'] + c['end_frame'] - c['start_frame']
+    A['clips'] = [c for c in A['clips'] if c['track'] != 'drop']
     for c in A['clips']:
         clips.append(dict(beat=c.get('src', c['track']), role=c['track'], file=c['file'], media_type=2, track_index=at[c['track']],
                           record_frame=c['record_frame'], start_frame=c['start_frame'], end_frame=c['end_frame']))
@@ -72,7 +79,7 @@ def plan(nv, na):
                             note='The riser lands here and the hook music fades out over the next few seconds.', duration=1))
     markers = nudge(markers)
     out = dict(source_timeline=PL.get('source_timeline'), new_timeline=PL.get('new_timeline'),
-               tracks=dict(video=[dict(index=vt[r], name=n) for r, n in ROLES_V if r != 'censor' or any(c['role'] == 'censor' for c in clips)], audio=[dict(index=at[r], name=n, audio_type='stereo') for r, n in ROLES_A]),
+               tracks=dict(video=[dict(index=vt[r], name=n) for r, n in ROLES_V if r != 'censor' or any(c['role'] == 'censor' for c in clips)], audio=[dict(index=at[r], name=n, audio_type='stereo') for r, n in ROLES_A if r not in ('sfx2', 'sfx3') or any(c['role'] == r for c in clips)]),
                import_files=sorted({c['file'] for c in clips}), clips=clips, punches=punches, markers=markers, problems=missing)
     json.dump(out, open('placement.json', 'w'), indent=1)
     print(f"placement.json: {len(clips)} clips ({sum(c['media_type'] == 1 for c in clips)} video, {sum(c['media_type'] == 2 for c in clips)} audio), "

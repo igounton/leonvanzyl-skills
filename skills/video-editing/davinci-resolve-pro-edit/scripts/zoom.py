@@ -12,8 +12,9 @@ Beat (edit_plan.json):
    "marks": [{"t": 2.1, "t_out": 6.8, "type": "band", "rect": [610, 560, 1560, 80]}],   rect in SOURCE px
    "pip": "keep" | "none",                                              default: keep when the source has a PiP
    "sfx": [{"t": 3.2, "type": "click"}]}                                only visible presses (audio.py reads these)
-Mark types: box (clay outline, lands with a small settle), band (marker-pen sweep; a wash on dark UI, a multiply
-tint on light pages), spot (dims everything else), underline (a sweeping clay bar under the rect).
+Mark types (in the brand accent, config.MARK = azure): box (outline with a soft glow, lands with a small settle), band
+(marker-pen sweep; an accent wash on dark UI, a blue multiply tint on light pages), spot (dims everything else),
+underline (a sweeping accent bar under the rect).
 Frames that move get a 4-sample 270-degree shutter (motion blur); frames at rest are sharp.
 
 usage: python scripts/zoom.py z01 [z02 ...] [--preview 1.0,3.5] [--x264] [--tag v2] [--jobs N]   -> media/<id>[_v2].mp4 (or preview/<id>_<t>.png)
@@ -62,7 +63,7 @@ class Painter:
     def __init__(self, src, kfit):
         self.m, self.r = M.color(src)
         self.px = C.UNIT / kfit
-        self.clay = M.rgb2yuv(C.CLAY, self.m, self.r)
+        self.clay = M.rgb2yuv(C.MARK, self.m, self.r)          # the brand accent (name kept)
         self.black = 16.0 if self.r == 'tv' else 0.0
         self.span = 219.0 if self.r == 'tv' else 255.0
 
@@ -108,31 +109,37 @@ class Painter:
                 sweep = M.ease('power3.out')(pin)
                 m = rrect_mask(rh, rw, int(8 * px)); m[:, int(rw * sweep):] = 0; m *= pout
                 light = P[0][y0:y1, x0:x1].mean() > self.black + 0.6 * self.span
-                if light:       # marker pen on a light page: multiply with a clay tint (exact, via RGB for this region)
+                if light:       # marker pen on a light page: multiply with an accent tint (exact, via RGB for this region)
                     rgb = M.yuv2rgb(P[0][y0:y1, x0:x1], P[1][y0 // 2:y1 // 2, x0 // 2:x1 // 2], P[2][y0 // 2:y1 // 2, x0 // 2:x1 // 2], self.m, self.r).astype(np.float32)
-                    tint = np.array([248, 216, 200], np.float32) / 255
+                    tint = (0.62 + 0.38 * np.array(C.MARK, np.float32) / 255) ** 0.55   # a soft marker in the accent hue
                     rgb = rgb * (1 - m[..., None]) + rgb * tint * m[..., None]
                     yuv = M.rgb2yuv(rgb, self.m, self.r)
                     P[0][y0:y1, x0:x1] = np.clip(yuv[..., 0] + 0.5, 0, 255).astype(np.uint8)
                     for c in (1, 2):
                         P[c][y0 // 2:y1 // 2, x0 // 2:x1 // 2] = np.clip(cv2.resize(yuv[..., c], (rw // 2, rh // 2), interpolation=cv2.INTER_AREA) + 0.5, 0, 255).astype(np.uint8)
-                else:           # dark UI: a translucent clay wash
-                    self.blend(P, 0.28 * m, x0, y0, self.clay)
+                else:           # dark UI: a translucent accent wash
+                    self.blend(P, 0.24 * m, x0, y0, self.clay)
             elif typ == 'underline':
                 sweep = M.ease('power3.out')(pin)
                 bh = max(2, int(4 * px)) // 2 * 2
                 m = np.zeros((rh, rw), np.float32); m[rh - bh:, :int(rw * sweep)] = pout
                 self.blend(P, m, x0, y0, self.clay)
-            else:               # box: clay outline + faint fill, lands with a small settle
+            else:               # box: accent outline + faint fill + a soft glow outside, lands with a small settle
                 e = M.ease('power3.out')(pin); a = min(1.0, pin * 2.5) * pout
+                gp = int(18 * px)                                                   # room for the glow around the ring
+                X0, Y0 = max(0, x0 - gp) // 2 * 2, max(0, y0 - gp) // 2 * 2
+                X1, Y1 = min(W, x1 + gp), min(H, y1 + gp); X1 -= (X1 - X0) % 2; Y1 -= (Y1 - Y0) % 2
+                ox, oy = x0 - X0, y0 - Y0
                 grow = (1 - e) * 0.04; gx, gy = int(rw * grow / 2), int(rh * grow / 2)
                 sub = rrect_mask(rh - 2 * gy, rw - 2 * gx, int(12 * px))
-                outer = np.zeros((rh, rw), np.float32); outer[gy:gy + sub.shape[0], gx:gx + sub.shape[1]] = sub
+                outer = np.zeros((Y1 - Y0, X1 - X0), np.float32); outer[oy + gy:oy + gy + sub.shape[0], ox + gx:ox + gx + sub.shape[1]] = sub
                 bw = max(2, int(3 * px)); inner = np.zeros_like(outer)
                 ih, iw = sub.shape[0] - 2 * bw, sub.shape[1] - 2 * bw
-                if ih > 0 and iw > 0: inner[gy + bw:gy + bw + ih, gx + bw:gx + bw + iw] = rrect_mask(ih, iw, max(1, int(12 * px) - bw))
-                self.blend(P, 0.14 * a * inner, x0, y0, self.clay)
-                self.blend(P, np.clip(outer - inner, 0, 1) * a, x0, y0, self.clay)
+                if ih > 0 and iw > 0: inner[oy + gy + bw:oy + gy + bw + ih, ox + gx + bw:ox + gx + bw + iw] = rrect_mask(ih, iw, max(1, int(12 * px) - bw))
+                ring = np.clip(outer - inner, 0, 1)
+                glow = cv2.GaussianBlur(ring, (0, 0), 6 * px) * 0.55             # the design system's accent glow
+                self.blend(P, np.clip(0.10 * inner + glow * (1 - ring), 0, 1) * a, X0, Y0, self.clay)
+                self.blend(P, ring * a, X0, Y0, self.clay)
 
 
 _FILL = {}
@@ -194,6 +201,9 @@ def render(bid, preview=None, nvenc=None):
     kfit = min(C.TW / W, C.TH / H)
     S = json.load(open('scenes.json')) if os.path.exists('scenes.json') else {'files': {}}
     win = (S['files'].get(src) or {}).get('pip')
+    ipips = {tuple(S.get('items', {}).get(str(s_[1]['v1']), {}).get('pip') or ()) for s_ in seq}
+    if len(ipips) == 1 and next(iter(ipips)): win = list(next(iter(ipips)))   # per-item window (the PiP moves inside a file)
+    elif len(ipips) > 1: print(f'WARN {bid}: the PiP window changes inside the beat: {sorted(ipips)}')
     keep = bool(win) and b.get('pip', 'keep') == 'keep'
     if keep: win = [v // 2 * 2 for v in win]
     marks = b.get('marks', []); painter = Painter(src, kfit)

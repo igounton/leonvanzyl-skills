@@ -84,7 +84,13 @@ def matte(bid):
     for fr in M.decode(seq, w, h, f'crop={w}:{h}:{x}:{y}'):
         enc.stdin.write(cv2.resize(fr, (mw, mh), interpolation=cv2.INTER_AREA).tobytes())
     enc.stdin.close(); enc.wait()
-    import matte_gpu                                            # the same u2net model on onnxruntime-gpu; CLI fallback inside
+    import matte_rvm                                            # Robust Video Matting: fine hair, stable over time, people only
+    if matte_rvm.available():
+        try:
+            matte_rvm.matte(bid); return
+        except Exception as e:                                  # e.g. no CUDA/cuDNN: fall back to u2net
+            print(f'{bid}: RVM matte failed ({e}) - falling back to u2net')
+    import matte_gpu                                            # u2net on onnxruntime-gpu; CLI fallback inside
     matte_gpu.matte(bid)
 
 
@@ -206,7 +212,7 @@ def compose(bid, preview=None, nvenc=None):
     out = os.path.join(C.MEDIA, f'{bid}{TAG}.mp4')
     fvp = sp = None
     if mode == 'fvp':
-        f = seq[0][0]; win = (scenes()['files'].get(f) or {}).get('pip')
+        f = seq[0][0]; win = (scenes()['items'].get(str(seq[0][1]['v1'])) or {}).get('pip') or (scenes()['files'].get(f) or {}).get('pip')
         if not win: raise SystemExit(f'{bid}: fvp needs a PiP window for {f} (scenes.json) - use fv')
         x, y, w, h = win; kfit = min(C.TW / M.probe(f)['width'], C.TH / M.probe(f)['height'])
         X, Y, Wo, Ho = [int(round(v * kfit)) for v in win]

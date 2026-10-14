@@ -29,6 +29,8 @@ cp "<saved probe file>" structure_raw.json
 "$CW" scripts/vedit.py transcribe --work . --hotwords "Name1, Name2"      # background, ~1.5 s per clip; resumable
 $PY scripts/program.py                                                    # program.json, voice48.wav, rms10ms.npy, transcript.txt
 $PY scripts/scenes.py                                                     # scenes.json + scenes.png (LOOK), scene column in transcript.txt
+$PY scripts/pip_items.py                                                  # the PiP corner per V1 item (OBS scenes move it inside a file)
+$PY scripts/patch_flash.py scan                                           # items that start/end on a flash of another window - LOOK
 ```
 - If the clean cut was made by the foundation-cut step in this same session, reuse its hotwords (and its
   `hotwords.txt`); the transcripts of the clean cut's clips are re-made here because clip boundaries differ.
@@ -102,7 +104,9 @@ $PY scripts/build_gfx.py <name>                        # scripts/gfx_<name>.py -
 bash scripts/render_gfx.sh draft g01 g02               # 10 fps drafts, all at once
 $PY scripts/draftsheet.py g01 8                        # chk/g01_sheet.png - LOOK, fix, rebuild
 bash scripts/render_gfx.sh full g01 g02                # 4x fps + motion blur, lossless PNG capture, UHD at device scale 2 -> gfx/out/
-$PY scripts/compose.py g02 --matte                     # split beats only: the frame-exact camera clip + its matte on the GPU (matte_gpu.py)
+$PY scripts/compose.py g02 --matte                     # split beats only: the frame-exact camera clip + its matte on the GPU
+                                                       #   (matte_rvm.py, Robust Video Matting; u2net matte_gpu.py when RVM is missing)
+$PY scripts/matte_rvm.py g02 --preview 30,229          # RVM matte stills on grey (chk/g02_rvm_<n>.png) - LOOK at the hair edge
 $PY scripts/compose.py g01 g02 --jobs 3                # -> $M/g01.mp4 (fvp: PiP pasted; split: camera card + head), one process per beat
 $PY scripts/compose.py g02 --preview 0.5               # one full-resolution split frame in seconds - LOOK at the whole face
 $PY scripts/draftsheet.py g01 8 --full
@@ -112,6 +116,14 @@ so every graphics subagent can call it freely; it prints `done <id> ... (capture
 Run `render_beats.sh`, the graphics renders and the composes concurrently; HyperFrames is the long pole.
 
 ## 6. Audio
+SFX come from the royalty-free library in the skill's `assets/sfx` (`sfx_library.py --check`; `sfxlib.py`
+loads it) and fall back to synthesized sounds without it. Besides the beats' own events, `audio.py` adds a highlight
+swish on every band/underline mark and highlight reveal, a soft ding on box marks (not when marks come thick and
+fast), a soft whoosh peaking on the cut into each full-visual graphic, and a sting on hook_end (`auto_sfx: false`
+in the plan turns that off). Hook music: `music.file` in the plan (a generated track from `music_gen.py`, with
+`file_offset` where its lift should start) or the synthesized `music.style`; `music.under_voice_lu` sets how far under
+the hook's voice it sits before the ~5 dB speech duck (default 18; 15 for a track that should lift the hook).
+An edit writes new names with `--tag v2`.
 ```bash
 $PY scripts/audio.py        # $M/sfx/*.wav, $M/music_hook.wav, $M/riser.wav, audio_clips.json, mix_preview.wav
 ```
@@ -136,9 +148,18 @@ Full call sequence and gotchas: `references/resolve-assembly.md`. In short:
 10. `project_manager save`, `timeline_versioning end_run`.
 11. `timeline probe_timeline_structure` -> `built_structure.json` ->
     `$PY scripts/place.py verify built_structure.json structure_raw.json` (expect every clip exact and the clean
-    cut's tracks untouched), then `timeline_frame capture {frame, quality: "preview", max_width: 1280}` on a zoom,
-    a punch-in with a keyword pop, a split and a CTA.
-12. `$PY scripts/publish.py`, then write `$M/report.md`.
+    cut's tracks untouched).
+12. Review render (also the user's review copy) with `script_plugin run_inline`, then decode frames of a zoom, a
+    punch-in with a keyword pop, a split and a CTA from the file (ffmpeg `-ss <s> -frames:v 1`):
+    ```python
+    project.LoadRenderPreset('YouTube - 1080p'); project.SetCurrentRenderFormatAndCodec('mp4', 'H264_NVIDIA')
+    project.SetRenderSettings({'SelectAllFrames': True, 'TargetDir': r'<M>
+eview', 'CustomName': '<timeline> - review 1080p',
+                               'FormatWidth': 1920, 'FormatHeight': 1080})   # False if any key is rejected: read the job back
+    job = project.AddRenderJob(); project.StartRendering([job], False)       # returns at once; poll GetRenderJobStatus(job)
+    ```
+    `timeline_frame capture` works for one or two frames but once hung for 30 minutes.
+13. `$PY scripts/publish.py`, then write `$M/report.md`.
 
 ## 8. Edits
 Change the plan, then re-run only what it touches. Resolve holds the imported files open, so an edit renders to a
@@ -150,8 +171,14 @@ that clip picks up the new render in place (tested: same length, same position, 
   every zoom inside the beat too, since they carry the old blur.
 - **A graphic (same t0/t1):** edit `scripts/gfx_<name>.py` -> build -> draft -> `render_gfx.sh full <id>` ->
   `compose.py <id> --tag v2` -> `replace_clip`.
-- **Music or SFX:** edit the plan -> `audio.py` writes the same names; copy the changed WAVs to new names (or
-  re-run with the old ones removed from the pool) and `replace_clip` each; a changed SFX *time* is a new placement.
+- **Music only (same length):** edit the plan -> `audio.py --tag v3` -> `replace_clip` the music clip with
+  `$M/music_hook_v3.wav`.
+- **SFX or a new music file:** `audio.py --tag v2` moves sounds, so it is a new placement: `place_audio_swap.py plan
+  --audio-tracks N --tag v2` -> add the tracks it lists -> `safe_import_media` its files -> `place_audio_swap.py ids`
+  -> one `append_to_timeline` -> disable the old PE audio tracks and rename them "(old)" (`timeline set_track_enable`,
+  `set_track_name`) -> save. One `timeline_versioning` run around it.
+- **Many clips at once (a restyle):** one `script_plugin run_inline` that walks the media pool and calls
+  `ReplaceClip(path)` per id, then `SaveProject()` (61 swaps in seconds).
 - **A beat's timing or length changes:** the MCP cannot move or trim a placed clip. Append the new render at the new
   frame on the same track, then ask the user to delete the old clip (or use `timeline delete_clips`, which archives
   the timeline and needs the Edit page).

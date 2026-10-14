@@ -3,9 +3,30 @@
 Every `gfx` beat is one standalone HyperFrames composition, `gfx/<id>.html`, generated from a compact Python config
 by `scripts/build_gfx.py`, which imports `scripts/gfx_<name>.py` modules from the work dir. Each page holds the shared
 `gfx/engine.js` (the shorts engine generalised to 16:9: world camera, depth of field, motion blur, captures) and one
-`window.CFG`. The worked example is `SKILL/examples/gfx_example.py` (two beats from a real edit). Copy its patterns.
+`window.CFG`. The worked example is `SKILL/examples/gfx_example.py` (two beats from a real edit). The full reference
+edit, 27 graphics in the brand theme that Leon called spot on, is `SKILL/examples/harness-engineering/` (`gfx_a.py`,
+`gfx_b.py`; its README indexes the patterns: a continuous world over two beats, concept diagrams built word by word,
+real sources). Copy their patterns.
 
-Contents: [Helpers](#build-helpers) · [CFG](#cfg) · [Cards](#cards) · [Camera](#camera-moves) · [Depth of field](#depth-of-field) · [Captures](#real-captures) · [Splits](#split-beats) · [SFX](#sfx-events) · [Render and check](#render-and-check)
+## Theme: the channel's design system (default)
+Every page is themed `stage` unless its CFG says `theme='paper'` (the old white world - rejected for Leon's channel).
+The theme is his "Leon YouTube" design system (`C:\cognaitiv-ai\design-system\leon-youtube`; editing-spec section 5):
+- **Painted for you** behind the world: the graphite stage gradient + spotlight, two light beams, the animated horizon
+  wave of dots in the accent (`cfg.wave = dict(level='low'|'middle'|'high', k=1.0)` or `False`), the vignette.
+- **Card kinds:** `glass` (frosted stage-800, hairline, panel shadow, white text; `highlight=True` = accent hairline +
+  bloom, once per scene), `window` (white product window, radius 22, window shadow), `paper` (white card, radius 24),
+  `media` (screenshots), `capture` (real pages: white window on a dark washed, blurred clone), `plain`/`logo`.
+- **CSS:** `.display .h1 .h2 .sub .body .caption .label(.accent/.white) .mono(.code-k/.code-s/.code-n/.code-c) .ink
+  .ink2 .pill(.mint/.ember/.neutral) .hair .accent .secondary .muted`, and the tokens as CSS variables (`--azure`,
+  `--ember`, `--mint`, `--iris`, `--accent`, `--text-secondary`, `--text-muted`, `--hairline`, `--ink`, `--ink-2`,
+  `--azure-wash`, ...). Fonts: Figtree (variable) and Geist Mono (variable), bundled in `assets/fonts`.
+- **Accent:** `cfg.accent = 'azure'` (default) or `'ember'`.
+- **Icon tiles:** `tile_html(color, glyph, size=116, tilt=-8)` - the glossy 3D tiles of his slides (azure|iris|ember|
+  mint; glyphs code, arrow, check, shield, sparkle, bolt, bars, eyes, or your own white `svg`).
+- Highlights: on paper/captures a band in `--azure-wash` under multiply; on glass/dark UI `rgba(47,149,255,.22)` with
+  the accent line; boxes in accent with `box-shadow: 0 0 24px rgba(47,149,255,.45)`.
+
+Contents: [Theme](#theme-the-channels-design-system-default) · [Helpers](#build-helpers) · [CFG](#cfg) · [Cards](#cards) · [Camera](#camera-moves) · [Depth of field](#depth-of-field) · [Captures](#real-captures) · [Splits](#split-beats) · [SFX](#sfx-events) · [Render and check](#render-and-check)
 
 ## Build helpers (`scripts/build_gfx_common.py`)
 - **`words(bid)`** returns `(beat, words)`: the beat with its `dur`, and its words with times relative to the beat

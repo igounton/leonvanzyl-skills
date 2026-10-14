@@ -31,7 +31,9 @@ Every call below was run on Resolve Studio 21.1 with MCP 2.103 on the first proj
   punch-in with a keyword pop, inside a split and on a CTA card. Add `timeline_name: "<clean cut>"` to capture the
   same frame from the clean cut for a before/after (it switches and restores the current timeline). It renders one
   frame through the Deliver page and resets the project's render target directory, file name and mark range - say
-  so in the report.
+  so in the report. One capture once hung for 30 minutes on a 16-minute timeline: for more than a frame or two,
+  make the 1080p review render instead (pipeline.md section 7, step 12) and decode frames from the file - the user
+  gets a review copy out of it too.
 
 ## Facts measured on the build
 - **Transforms:** `ZoomX/ZoomY` 1.0 = 100%, about the frame centre. `Pan` +right and `Tilt` +UP, in timeline
