@@ -19,7 +19,7 @@ M = json.load(open(f'{sk}/music.json', encoding='utf-8')) if os.path.exists(f'{s
 if os.path.exists(f'{sk}/sfx_log.json'):                       # written by audio.py: what actually plays, and how loud
     print('\n## sfx (absolute s, sound, level vs voice peak, source)')
     for e in json.load(open(f'{sk}/sfx_log.json', encoding='utf-8')):
-        print(f"{e['t']:.3f} | {e['type']} | {e['sound']} | {e['level_db']} dB | {e.get('src')}")
+        print(f"{e['t']:.3f} | {e['type']} | {e['sound']} | {e.get('lu', '-')} LU under the voice ({e['level_db']} dB peak) | {e.get('src')}")
     print(f"library: {M.get('sfx_library') or 'none (synthesized sounds)'}")
 else:
     ev = json.load(open('gfx/sfx_events.json', encoding='utf-8'))

@@ -86,6 +86,12 @@
 - **No sponsor that isn't this video's sponsor.** A long-form graphic labelled the agent pool with a sandbox vendor
   that had sponsored an earlier video; Leon had it replaced. Name brands only when the speaker does.
 
+- **Loudness, not peak (2026-10-16):** viewers of the long-form found "ding, scribble, ding, ding" annoying; measured,
+  peak-based levels made bells, chimes and scribbles 6-14 dB louder to the ear than clicks at the same setting. Both
+  skills now level every sound by loudness (`sfxlib`). The shorts kept their density and levels (approved); only the
+  chimes came down (-8 -> -12 LU) and the scribble lost its hiss. The long-form's body got variant C (fewer dings and
+  scribbles, every animation keeps its pops).
+
 **Shorts from a finished long-form edit (Harness Engineering, 2026-10-14: 5 shorts from the 4K export)**
 - **Reuse the pro-edit run, by script:** the long-form's `program.json` (final time -> raw recordings), captures, logos
   and `voice48.wav` were copied by hand here, and the raw footage is what gave the graphics clean, unzoomed UI and app

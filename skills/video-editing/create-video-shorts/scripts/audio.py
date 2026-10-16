@@ -99,12 +99,14 @@ def riser(dur=2.6):
     s[-int(0.012 * SR):] *= np.linspace(1, 0, int(0.012 * SR))   # audible end exactly on the join
     return norm(s)
 
-# ---------------- levels (peak against the voice's peak) ----------------
-LEVEL = {'click': -10, 'pop': -10, 'chime': -10, 'whoosh': -9, 'key': -16, 'tick': -16, 'highlight': -14, 'ding': -12, 'sting': -10}
-# library recordings are fuller than the synthesized sounds, so everything sits a little lower; highlight swishes are
-# frequent, so they stay well under the voice
-LIB_LEVEL = {'click': -14, 'pop': -14, 'chime': -12, 'whoosh': -12, 'highlight': -16, 'ding': -16, 'sting': -10,
-             'key': -20, 'tick': -20, 'riser': -12}
+# ---------------- levels: by LOUDNESS against the voice's speaking loudness (sfxlib; Leon's A/B/C test, 2026-10-16) ----
+# Peak-based levels made chimes the loudest sound (8 LU under the voice) while clicks sat 22 LU under. The shorts keep
+# their own levels (sfxlib.SHORTS_TARGET: pop and scribble -14, whoosh / chime -12, the hit -16, click -21, keys -27 LU),
+# chimes evened out and the scribble's hiss tamed; shorts.json "sfx_levels" overrides per type.
+RISER_DB = -12                                  # the riser's peak against the voice's peak
+TARGET = dict(sfxlib.SHORTS_TARGET, **SH.get('sfx_levels', {}))
+RULES = dict(sfxlib.SHORTS_RULES, **SH.get('sfx_rules', {}))
+VSPEECH = sfxlib.speech_loudness(voice)
 LIB_CAT = {'click': 'click', 'pop': 'pop', 'chime': 'chime', 'whoosh': 'whoosh', 'highlight': 'highlight', 'ding': 'ding',
            'sting': 'sting', 'key': 'typing', 'tick': 'typing', 'riser': 'riser'}
 # Leon's picks from the long-form edits: the minimal hit on the hook end, the cinematic build as the riser
@@ -135,39 +137,47 @@ if SH.get('auto_sfx', True) and SH.get('sting', True):
 ev.sort(key=lambda e: e['t'])
 main_t = [e['t'] for e in ev if e['type'] not in ('highlight', 'key', 'tick')]
 ev = [e for e in ev if not (e['type'] == 'highlight' and any(abs(e['t'] - t) < 0.15 for t in main_t))]   # never stacked on another sound
+for e in ev:
+    if e.get('src') in ('cta', 'hook'): e['keep'] = True      # the CTA card and the hook hit always play
+ev, dropped = sfxlib.select(ev, RULES)                         # a light safety net: no pile-ups, accents 8 s apart
 
 sfx = np.zeros((N, 2)); log = []; wv = 0; k = 0
-def add(s, i0, g, name, e):
+def add(s, i0, typ, name, e, vary=1.0):
     s = np.asarray(s, np.float64)
     if s.ndim == 1: s = np.stack([s, s], 1)
+    if typ == 'highlight': s = sfxlib.tame(s)                  # the marker scribble's hiss off
+    tgt = TARGET.get(typ, -14); g = sfxlib.gain_for(s, tgt, VSPEECH) * vary
     c0 = max(0, -i0); i0 = max(0, i0); m = min(len(s) - c0, N - i0)
     if m > 0: sfx[i0:i0 + m] += g * s[c0:c0 + m]
-    log.append(dict(t=round(float(e['t']), 3), type=e['type'], sound=name, level_db=round(float(20 * np.log10(g / vpeak)), 1), src=e.get('src')))
+    log.append(dict(t=round(float(e['t']), 3), type=e['type'], sound=name, lu=tgt,
+                    level_db=round(float(20 * np.log10(g * np.abs(s).max() / vpeak + 1e-12)), 1), src=e.get('src')))
 while k < len(ev):
     e = ev[k]; typ = e['type']
     lib_ok = USE_LIB and LIB.has(LIB_CAT.get(typ, typ), short=0.35 if typ in ('key', 'tick') else None)
-    g = vpeak * 10 ** ((LIB_LEVEL if lib_ok else LEVEL).get(typ, -14) / 20)
     if typ in ('key', 'tick'):                       # a typing run -> real single key strokes, slightly varied in level
         run = [e]
         while k + 1 < len(ev) and ev[k + 1]['type'] in ('key', 'tick') and ev[k + 1]['t'] - run[-1]['t'] < 0.35:
             k += 1; run.append(ev[k])
         for j, r in enumerate(run):
             kk, _, stem = LIB.get('typing', short=0.35) if lib_ok else (key(j), 0, 'synth_key')
-            add(kk, int(round(r['t'] * SR)), g * (0.8 + 0.2 * ((j * 7) % 3) / 2), stem, r)
+            add(kk, int(round(r['t'] * SR)), typ, stem, r, vary=0.8 + 0.2 * ((j * 7) % 3) / 2)
     elif lib_ok:                                     # a recorded sample; whooshes land their loudest moment on the whip midpoint
         x, pk, stem = LIB.get(LIB_CAT.get(typ, typ))
-        add(x, int(round(e['t'] * SR)) - pk, g, stem, e)
+        add(x, int(round(e['t'] * SR)) - pk, typ, stem, e)
     elif typ == 'whoosh':
         s, mid = whoosh(wv); wv += 1
-        add(s, int(round(e['t'] * SR)) - mid, g, f'synth_whoosh_{wv % 4}', e)
+        add(s, int(round(e['t'] * SR)) - mid, typ, f'synth_whoosh_{wv % 4}', e)
     elif typ in ('highlight', 'ding', 'sting'):      # no library: soft synthesized stand-ins
         s, mid = (whoosh(wv) if typ == 'highlight' else (chime(), 0)); wv += 1
-        add(s, int(round(e['t'] * SR)) - mid, g * (0.5 if typ == 'highlight' else 1.0), f'synth_{typ}', e)
+        add(s, int(round(e['t'] * SR)) - mid, typ, f'synth_{typ}', e)
     else:
         s = {'click': click, 'pop': pop, 'chime': chime}.get(typ, pop)()
-        add(s, int(round(e['t'] * SR)), g, f'synth_{typ}', e)
+        add(s, int(round(e['t'] * SR)), typ, f'synth_{typ}', e)
     k += 1
 json.dump(log, open(f'{sk}/sfx_log.json', 'w'), indent=1)
+AUD = sfxlib.audit(ev, END)
+print(f"{sk}: sfx {AUD['sounds']} sounds ({AUD['per_min']}/min) {AUD['by_type']}, accents {AUD['accents']}, "
+      f"busiest 15 s {AUD['busiest_15s']}; {len(dropped)} not played" + (f" ({sorted({d['why'] for d in dropped})})" if dropped else ''))
 
 # ---------------- riser: its loudest moment exactly on the hook join ----------------
 ris = np.zeros((N, 2))
@@ -175,7 +185,7 @@ if USE_LIB and LIB.has('riser') and SH.get('riser_from_library', True):
     x, pk, rstem = LIB.get('riser'); pk = pk or int(np.argmax(np.abs(x).mean(1)))
     rs = x[:pk + int(0.012 * SR)].astype(np.float64)                     # cut right after its peak
     rs[-int(0.012 * SR):] *= np.linspace(1, 0, int(0.012 * SR))[:, None]
-    rs *= vpeak * 10 ** (LIB_LEVEL['riser'] / 20)
+    rs *= vpeak * 10 ** (RISER_DB / 20)
 else:
     rstem = 'synth_riser'; rs = np.repeat(riser(2.6)[:, None], 2, 1) * vpeak * 10 ** (-12 / 20)
 i1 = int(round(JOIN * SR)); i0 = i1 - len(rs); a = max(0, i0)

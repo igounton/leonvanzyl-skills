@@ -91,3 +91,142 @@ class Library:
         pk = int(d['peak'] * SR) if d['peak'] else int(np.argmax(np.abs(x).mean(1)))
         # the sample index to land on the event: the onset, or the loudest moment when the manifest says align=peak
         return x, (pk if d['align'] == 'peak' else 0), os.path.splitext(os.path.basename(d['path']))[0]
+
+
+# ---------------- how loud, and how often (both skills) ----------------
+# Tuned on Leon's A/B/C test of the Harness Engineering edit (2026-10-16), after a viewer wrote "the new sound effects
+# get annoying fast - ding, scribble, ding, ding, ding". Variant C was his pick: "not too distracting, not too dense".
+# Levels go by LOUDNESS (the loudest 400 ms, K-weighted like LUFS) against the voice's speaking loudness, never by peak:
+# at the same peak a bell or a marker scribble sounds 6-10 dB louder than a click. Targets are LU below the voice as the
+# viewer hears it (long-form: after Resolve's main bus, which pulled the effects ~4.5 dB closer to the voice).
+LONGFORM_TARGET = {'sting': -10, 'chime': -10, 'ding': -11, 'notification': -12, 'whoosh': -12, 'whoosh_soft': -11,
+                   'pop': -12, 'highlight': -14, 'glitch': -14, 'click': -16, 'key': -16, 'tick': -16}
+SHORTS_TARGET = {'whoosh': -12, 'chime': -12, 'ding': -12, 'notification': -12, 'pop': -14, 'highlight': -14,
+                 'glitch': -14, 'sting': -16, 'click': -21, 'key': -27, 'tick': -27}   # the shorts' own levels, chimes evened out
+# what a crowded moment keeps first (lower = more important)
+PRIORITY = {'riser': 0, 'sting': 0, 'chime': 1, 'whoosh': 2, 'whoosh_soft': 2, 'click': 3, 'key': 3, 'tick': 3,
+            'notification': 3, 'ding': 4, 'glitch': 5, 'highlight': 5, 'pop': 6}
+FAMILY = {'chime': 'accent', 'ding': 'accent', 'sting': 'accent', 'whoosh_soft': 'whoosh', 'tick': 'key'}
+# long-form body (variant C): bells and scribbles only where they mean something, every animation still audible
+LONGFORM_RULES = dict(first_per_src=('ding', 'highlight'), pop_max=5, pop_gap=0.6,
+                      family_gap={'accent': 15.0, 'highlight': 4.0}, min_sep=0.35, density=(7, 15.0))
+# shorts: music runs under them and the format is busier - a safety net only: the approved Harness Engineering shorts
+# peaked at 10 sounds in 10 s with accents 11 s+ apart, so nothing they did is dropped
+SHORTS_RULES = dict(first_per_src=(), pop_max=None, pop_gap=0.0, family_gap={'accent': 8.0}, min_sep=0.25, density=(10, 10.0))
+
+
+def _kw(x):
+    """the BS.1770 K-weighting (48 kHz)"""
+    from scipy.signal import lfilter
+    b1, a1 = [1.53512485958697, -2.69169618940638, 1.19839281085285], [1.0, -1.69065929318241, 0.73248077421585]
+    b2, a2 = [1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621]
+    return lfilter(b2, a2, lfilter(b1, a1, x))
+
+
+def _momentary(x, win=0.4):
+    x = np.asarray(x, np.float64)
+    y = _kw(x.mean(axis=1) if x.ndim > 1 else x) ** 2; n = int(win * SR); h = n // 4
+    if len(y) < n: y = np.pad(y, (0, n - len(y)))
+    cs = np.concatenate([[0.0], np.cumsum(y)]); a = cs[n::h]; b = cs[:-n:h][: len(a)]
+    return -0.691 + 10 * np.log10((a[: len(b)] - b) / n + 1e-12)
+
+
+def loudness(x):
+    """a sound's loudness: its loudest 400 ms, K-weighted (LUFS-like)"""
+    return float(_momentary(x).max())
+
+
+def speech_loudness(voice):
+    """the voice's typical loudness while speaking: the median 400 ms momentary loudness above -45 LUFS"""
+    m = _momentary(voice)
+    m = m[m > -45]
+    return float(np.median(m)) if len(m) else -23.0
+
+
+def gain_for(x, target_lu, v_speech):
+    """the linear gain that puts sound x at target_lu below (negative) the voice's speaking loudness"""
+    return 10 ** ((target_lu - (loudness(x) - v_speech)) / 20)
+
+
+def tame(x, db=-4.0, fc=7000.0):
+    """take the hiss off a bright sound (the marker scribble sits at ~10 kHz): about `db` above fc"""
+    from scipy.signal import butter, sosfilt
+    x = np.asarray(x, np.float64)
+    return x - (1 - 10 ** (db / 20)) * sosfilt(butter(2, fc, 'highpass', fs=SR, output='sos'), x, axis=0)
+
+
+def _units(ev):
+    """events -> sounds: a typing run (key / tick strokes under 0.35 s apart) is one sound"""
+    out, i = [], 0
+    while i < len(ev):
+        u = [ev[i]]
+        if ev[i]['type'] in ('key', 'tick'):
+            while i + 1 < len(ev) and ev[i + 1]['type'] in ('key', 'tick') and ev[i + 1]['t'] - u[-1]['t'] < 0.35:
+                i += 1; u.append(ev[i])
+        out.append(dict(t=u[0]['t'], type=u[0]['type'], src=u[0].get('src'), keep=any(e.get('keep') for e in u), ev=u))
+        i += 1
+    return out
+
+
+def select(ev, rules, start=0.0):
+    """Which sounds play. Events before `start` (the long-form hook, music under it) and events marked keep=True (CTA
+    cards, the hook hit) always play. After that, in order:
+      first_per_src  only the first ding / scribble of a zoom or graphic sounds
+      pop_max/gap    an animation's pops: at most pop_max, pop_gap seconds apart
+      family_gap     the same family not again within N s (accents = chime / ding / sting)
+      min_sep        never two sounds on top of each other (the more important one stays)
+      density        at most n sounds in any w seconds (the least important go first)
+    Returns (kept events, dropped events with a 'why')."""
+    ev = sorted(ev, key=lambda e: e['t'])
+    units = _units(ev)
+    fixed = [u for u in units if u['t'] < start or u['keep']]
+    cand = [u for u in units if not (u['t'] < start or u['keep'])]
+    dropped = []
+    def drop(u, why):
+        for e in u['ev']: dropped.append(dict(e, why=why))
+    keep, firsts, pops = [], set(), {}
+    for u in cand:                                            # per animation
+        t, s = u['type'], u['src']
+        if t in rules.get('first_per_src', ()):
+            if (s, t) in firsts: drop(u, 'not the first ' + t + ' of ' + str(s)); continue
+            firsts.add((s, t))
+        if t == 'pop' and rules.get('pop_max'):
+            p = pops.setdefault(s, [])
+            if len(p) >= rules['pop_max'] or (p and u['t'] - p[-1] < rules.get('pop_gap', 0)): drop(u, 'pop budget of ' + str(s)); continue
+            p.append(u['t'])
+        keep.append(u)
+    out, body_fixed = [], [u for u in fixed if u['t'] >= start]     # the hook is its own world
+    for u in sorted(keep, key=lambda u: (PRIORITY.get(u['type'], 3), u['t'])):
+        f = FAMILY.get(u['type'], u['type']); gap = rules.get('family_gap', {}).get(f, 0)
+        if gap and any(FAMILY.get(o['type'], o['type']) == f and abs(o['t'] - u['t']) < gap for o in out + body_fixed):
+            drop(u, f'{f} within {gap:g} s'); continue
+        if any(abs(o['t'] - u['t']) < rules.get('min_sep', 0) for o in out + body_fixed):
+            drop(u, 'on top of another sound'); continue
+        out.append(u)
+    n, w = rules.get('density', (99, 1.0))
+    while True:
+        allu = sorted(out + body_fixed, key=lambda u: u['t'])
+        crowded = next(([o for o in allu if u['t'] <= o['t'] < u['t'] + w] for u in allu
+                        if sum(1 for o in allu if u['t'] <= o['t'] < u['t'] + w) > n), None)
+        movable = [o for o in (crowded or []) if o in out]
+        if not movable: break
+        worst = max(movable, key=lambda o: (PRIORITY.get(o['type'], 3), o['t']))
+        out.remove(worst); drop(worst, f'more than {n} sounds in {w:g} s')
+    kept = [e for u in sorted(out + fixed, key=lambda u: u['t']) for e in u['ev']]
+    return kept, dropped
+
+
+def audit(ev, duration, start=0.0):
+    """the numbers to keep an eye on (and to put in the report): sounds per minute after `start`, by type, the closest
+    accents, the busiest 15 s, and how often a family repeats within 8 s"""
+    units = [u for u in _units(sorted(ev, key=lambda e: e['t'])) if u['t'] >= start]
+    mins = max((duration - start) / 60, 1e-6)
+    ts = [u['t'] for u in units]
+    acc = [u['t'] for u in units if FAMILY.get(u['type'], u['type']) == 'accent']
+    rep = sum(1 for a, b in zip(units, units[1:])
+              if FAMILY.get(a['type'], a['type']) == FAMILY.get(b['type'], b['type']) and b['t'] - a['t'] < 8 and a['type'] != 'key')
+    busiest = max((sum(1 for o in ts if t <= o < t + 15) for t in ts), default=0)
+    from collections import Counter
+    return dict(sounds=len(units), per_min=round(len(units) / mins, 1), by_type=dict(Counter(u['type'] for u in units).most_common()),
+                accents=len(acc), closest_accents_s=round(min(np.diff(acc)), 1) if len(acc) > 1 else None,
+                busiest_15s=busiest, same_family_within_8s=rep)
