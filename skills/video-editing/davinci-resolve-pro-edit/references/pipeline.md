@@ -118,9 +118,13 @@ Run `render_beats.sh`, the graphics renders and the composes concurrently; Hyper
 ## 6. Audio
 SFX come from the royalty-free library in the skill's `assets/sfx` (`sfx_library.py --check`; `sfxlib.py`
 loads it) and fall back to synthesized sounds without it. Besides the beats' own events, `audio.py` adds a highlight
-swish on every band/underline mark and highlight reveal, a soft ding on box marks (not when marks come thick and
-fast), a soft whoosh peaking on the cut into each full-visual graphic, and a sting on hook_end (`auto_sfx: false`
-in the plan turns that off). Hook music: `music.file` in the plan (a generated track from `music_gen.py`, with
+swish on band/underline marks and highlight reveals, a soft ding on box marks, a soft whoosh peaking on the cut into
+each full-visual graphic, and a sting on hook_end (`auto_sfx: false` in the plan turns that off). Then
+`sfxlib.select` decides which play in the body (only a zoom's first ding / scribble, at most 5 pops per animation,
+accents 15 s apart, at most 7 sounds in 15 s; plan `sfx_rules`), and every sound is levelled by loudness against the
+voice (plan `sfx_levels`, `sfx_bus_lift`, `sfx_hook_bonus`; editing-spec section 6). It prints the body's sounds per
+minute, the accents, the busiest 15 s and why events were not played (also in `audio_clips.json` "sfx"): about
+10-11 a minute is the reference. Hook music: `music.file` in the plan (a generated track from `music_gen.py`, with
 `file_offset` where its lift should start) or the synthesized `music.style`; `music.under_voice_lu` sets how far under
 the hook's voice it sits before the ~5 dB speech duck (default 18; 15 for a track that should lift the hook).
 An edit writes new names with `--tag v2`.

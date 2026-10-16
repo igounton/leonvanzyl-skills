@@ -3,7 +3,13 @@ separate clips for three new audio tracks - Resolve's API cannot set clip volume
 
   SFX    one clip per visible event (beats' "sfx", graphics' sfx from build_gfx, overlay events): pop / click / chime /
          whoosh (loudest moment exactly on the whip midpoint) / key ticks (a typing run becomes one clip).
-         Peaks against the voice's peak: click, pop, chime -10 dB; whoosh -9 dB; keys and ticks -16 dB.
+         Which ones play in the body: sfxlib.select with LONGFORM_RULES (plan "sfx_rules" overrides) - only the first
+         ding / scribble of a zoom or graphic, at most 5 pops per animation, accents 15 s apart, scribbles 4 s apart,
+         at most 7 sounds in any 15 s; the hook, CTA cards and keyword pops always play.
+         How loud: by LOUDNESS against the voice's speaking loudness (sfxlib.LONGFORM_TARGET, plan "sfx_levels"),
+         e.g. chime -10, ding -11, pop -12, scribble -14 (hiss tamed), click and keys -16 LU, as heard after Resolve's
+         main bus ("sfx_bus_lift", 4.5 dB) - the hook +3 LU ("sfx_hook_bonus"), music masks it.
+         (Leon's A/B/C test, 2026-10-16: peak-based levels made bells and scribbles the loudest sounds in the edit.)
   Music  the HOOK ONLY: a seeded track in the plan's style and mood, filtered intro, beat drops at plan.music.drop,
          about 18 LU under the hook's voice, ducked ~5 dB under speech, fading out over plan.music.fade_out seconds
          from hook_end. Nothing after that.
@@ -101,11 +107,19 @@ def riser(dur=2.6):
     return nrm(s)
 
 
-LEVEL = {'click': -10, 'pop': -10, 'chime': -10, 'whoosh': -9, 'key': -16, 'tick': -16}
-# with the sample library (peak-normalised recordings, fuller than the synthesized ones) everything sits a little lower;
-# highlight swishes and dings are frequent, so they stay well under the voice
-LIB_LEVEL = {'click': -14, 'pop': -14, 'chime': -12, 'whoosh': -12, 'whoosh_soft': -17, 'highlight': -16, 'ding': -16,
-             'sting': -10, 'key': -20, 'tick': -20, 'riser': -12}
+RISER_DB = -12                    # the riser's peak against the voice's peak (the hook, under music)
+HOOK_END = float(PL.get('hook_end') or 0.0)
+RULES = dict(sfxlib.LONGFORM_RULES, **PL.get('sfx_rules', {}))
+TARGET = dict(sfxlib.LONGFORM_TARGET, **PL.get('sfx_levels', {}))
+BUS_LIFT = float(PL.get('sfx_bus_lift', 4.5))          # measured on Harness Engineering: Resolve's main bus lifted SFX ~4.5 dB
+HOOK_BONUS = float(PL.get('sfx_hook_bonus', 3.0))
+VSPEECH = sfxlib.speech_loudness(voice)
+
+
+def level(s, typ, t):
+    """the gain that puts sound s at its loudness target (LU under the voice as heard after the bus)"""
+    tgt = TARGET.get(typ, -14) + (HOOK_BONUS if t < HOOK_END else 0.0) - BUS_LIFT
+    return sfxlib.gain_for(s, tgt, VSPEECH), round(tgt + BUS_LIFT, 1)
 LIB_CAT = {'click': 'click', 'pop': 'pop', 'chime': 'chime', 'whoosh': 'whoosh', 'whoosh_soft': 'whoosh',
            'highlight': 'highlight', 'ding': 'ding', 'sting': 'sting', 'key': 'typing', 'tick': 'typing', 'riser': 'riser'}
 LIB = sfxlib.Library(prefer=PL.get('sfx_prefer'))
@@ -137,10 +151,10 @@ def collect_events():
         if bid not in ids: continue
         b = M.beat(bid)
         ev += [dict(t=b['t0'] + e['t'], type=e['type'], src=bid) for e in es]
-    for f in glob.glob('events/*.json'):
+    for f in glob.glob('events/*.json'):          # overlays (CTA cards, keyword pops): rare and deliberate, always play
         bid = os.path.splitext(os.path.basename(f))[0]
         if bid not in ids: continue
-        ev += [dict(e, src=bid) for e in json.load(open(f))]
+        ev += [dict(e, src=bid, keep=True) for e in json.load(open(f))]
     if PL.get('auto_sfx', True): ev += auto_events()
     ev.sort(key=lambda e: e['t'])
     # an optional sound never stacks on another event (a highlight right on a card's pop is just noise)
@@ -181,21 +195,22 @@ def auto_events():
             if r.get('type') == 'scaleX': ev.append(dict(t=round(b['t0'] + r['t'], 3), type='highlight', src=b['id']))
         prev = next((v for v in vis if abs(v['t1'] - b['t0']) < 1 / 120 and v is not b), None)
         if not (prev and prev['kind'] == 'gfx'): ev.append(dict(t=b['t0'], type='whoosh_soft', src=b['id']))
-    if PL.get('hook_end'): ev.append(dict(t=PL['hook_end'], type='sting', src='hook'))
+    if PL.get('hook_end'): ev.append(dict(t=PL['hook_end'], type='sting', src='hook', keep=True))
     return ev
 
 
 def main():
     os.makedirs(f'{C.MEDIA}/sfx{TAG}', exist_ok=True)
     clips = []; sfx_mix = np.zeros((N, 2), np.float32)
-    ev = collect_events()
+    ev_all = collect_events()
+    ev, dropped = sfxlib.select(ev_all, RULES, start=HOOK_END)
     lib = {}
     wv = 0
     k = 0
     while k < len(ev):
         e = ev[k]; typ = e['type']
         lib_ok = USE_LIB and LIB.has(LIB_CAT.get(typ, typ), short=0.35 if typ in ('key', 'tick') else None)
-        g = VPEAK * 10 ** ((LIB_LEVEL if lib_ok else LEVEL).get(typ, -14) / 20)
+        hook = '_hook' if e['t'] < HOOK_END else ''          # the hook's level differs, so its files are separate
         if typ in ('key', 'tick'):          # a typing run -> one clip
             run = [e]
             while k + 1 < len(ev) and ev[k + 1]['type'] in ('key', 'tick') and ev[k + 1]['t'] - run[-1]['t'] < 0.35:
@@ -204,22 +219,22 @@ def main():
             for j, r in enumerate(run):
                 kk = LIB.get('typing', short=0.35)[0] if lib_ok else np.repeat(key(j)[:, None], 2, 1)
                 i0 = int((r['t'] - t0) * SR); m = min(len(kk), n - i0); s[i0:i0 + m] += kk[:m] * (0.8 + 0.2 * ((j * 7) % 3) / 2)
-            s = s / (np.abs(s).max() + 1e-9) * g
             name = f"typing_{e['src']}_{len(clips):03d}.wav"; i0 = int(round(t0 * SR))
         elif lib_ok:                        # a recorded sample from the library; whooshes land their peak on the cut
             x, pk, stem = LIB.get(LIB_CAT.get(typ, typ))
-            s = x * g; name = f'{typ}__{stem}.wav'
+            s = x; name = f'{typ}__{stem}{hook}.wav'
             i0 = int(round(e['t'] * SR)) - pk                    # pk = 0 for onset-aligned sounds
         elif typ in ('highlight', 'ding', 'sting', 'whoosh_soft'):     # no library: synthesized stand-ins
             s, mid = (whoosh(wv) if typ in ('whoosh_soft', 'highlight') else (chime(), 0)); wv += 1
-            s = s * g * (0.5 if typ == 'highlight' else 1.0)
-            name = f'{typ}_{wv % 4}.wav'; i0 = int(round(e['t'] * SR)) - mid
+            name = f'{typ}_{wv % 4}{hook}.wav'; i0 = int(round(e['t'] * SR)) - mid
         elif typ == 'whoosh':
-            s, mid = whoosh(wv); wv += 1; s = s * g
-            name = f'whoosh_{wv % 4}.wav'; i0 = int(round(e['t'] * SR)) - mid
+            s, mid = whoosh(wv); wv += 1
+            name = f'whoosh_{wv % 4}{hook}.wav'; i0 = int(round(e['t'] * SR)) - mid
         else:
-            s = {'click': click, 'pop': pop, 'chime': chime}[typ]() * g
-            name = f'{typ}.wav'; i0 = int(round(e['t'] * SR))
+            s = {'click': click, 'pop': pop, 'chime': chime}.get(typ, pop)()
+            name = f'{typ}{hook}.wav'; i0 = int(round(e['t'] * SR))
+        if typ == 'highlight': s = sfxlib.tame(s)            # the marker scribble's hiss off
+        g, lu = level(s, typ, e['t']); s = s * g
         path = f'{C.MEDIA}/sfx{TAG}/{name}'
         if name not in lib: lib[name] = write(path, s)
         cut = max(0, -i0); i0 = max(0, i0)                  # a sound that would start before 0 is trimmed
@@ -227,10 +242,11 @@ def main():
         if m > 0:
             seg = np.asarray(s[cut:cut + m], np.float32)
             sfx_mix[i0:i0 + m] += seg if seg.ndim == 2 else seg[:, None]
-            clips.append(dict(track='sfx', file=os.path.abspath(path), type=typ, src=e['src'], t=round(e['t'], 3),
+            clips.append(dict(track='sfx', file=os.path.abspath(path), type=typ, src=e['src'], t=round(e['t'], 3), lu=lu,
                               record_frame=int(round(i0 / SR * FPS)), start_frame=int(round(cut / SR * FPS)),
                               end_frame=int(round(cut / SR * FPS)) + frames(m)))
         k += 1
+    sfx_audit = sfxlib.audit(ev, N / SR, start=HOOK_END)
 
     # ---- hook music + riser
     hook_end = PL['hook_end']; mp = PL.get('music', {})
@@ -239,9 +255,9 @@ def main():
         x, pk, stem = LIB.get('riser'); pk = pk or int(np.argmax(np.abs(x).mean(1)))
         rs = x[:pk + int(0.012 * SR)].copy()                                           # cut right after its peak
         rs[-int(0.012 * SR):] *= np.linspace(1, 0, int(0.012 * SR))[:, None]
-        rs *= VPEAK * 10 ** (LIB_LEVEL['riser'] / 20)
+        rs *= VPEAK * 10 ** (RISER_DB / 20)
     else:
-        rs = riser(2.6) * VPEAK * 10 ** (-12 / 20)
+        rs = riser(2.6) * VPEAK * 10 ** (RISER_DB / 20)
     i1 = int(round(hook_end * SR)); i0 = i1 - len(rs); cut = max(0, -i0)
     write(f'{C.MEDIA}/riser{TAG}.wav', rs)
     ris_mix[max(0, i0):i1] += rs[cut:] if rs.ndim == 2 else rs[cut:, None]
@@ -281,7 +297,11 @@ def main():
     mus_mix[:len(mus)] += mus.astype(np.float32)
     clips.append(dict(track='music', file=os.path.abspath(f'{C.MEDIA}/music_hook{TAG}.wav'), record_frame=0, start_frame=0, end_frame=frames(len(mus))))
     params.update(level_lufs=round(target, 1), hook_voice_lufs=round(hook_lufs, 1), fade_out=fade_out, hook_end=hook_end)
-    json.dump(dict(clips=clips, music=params, voice_peak_db=round(20 * np.log10(VPEAK), 2)), open('audio_clips.json', 'w'), indent=1)
+    sfx_info = dict(rules=RULES, levels_lu=TARGET, bus_lift_db=BUS_LIFT, hook_bonus_lu=HOOK_BONUS,
+                    voice_speech_lufs=round(VSPEECH, 1), body=sfx_audit, events=len(ev_all), dropped=len(dropped),
+                    dropped_why=dict(__import__('collections').Counter(d['why'].split(' of ')[0] for d in dropped).most_common()))
+    json.dump(dict(clips=clips, music=params, voice_peak_db=round(20 * np.log10(VPEAK), 2), sfx=sfx_info),
+              open('audio_clips.json', 'w'), indent=1)
 
     mix = voice + sfx_mix + mus_mix + ris_mix
     sf.write('mix_preview.wav', mix, SR, subtype='PCM_24')
@@ -289,6 +309,12 @@ def main():
     print(f"voice: {P['voice']['lufs']:.1f} LUFS (hook {hook_lufs:.1f}), robust peak {20 * np.log10(VPEAK):.1f} dBFS")
     print(f"music: {params['style']} {params.get('family')} {params['key']} {params['bpm']:.0f} bpm seed {params['seed']}, drop {drop:.2f}s, "
           f"{target:.1f} LUFS, fades out {hook_end:.2f} -> {hook_end + fade_out:.2f}s")
+    a = sfx_audit
+    print(f"sfx in the body: {a['sounds']} sounds, {a['per_min']}/min (reference ~10.5), accents {a['accents']} "
+          f"(closest {a['closest_accents_s']} s), busiest 15 s: {a['busiest_15s']}, same family within 8 s: "
+          f"{a['same_family_within_8s']} | {len(dropped)} of {len(ev_all)} events not played: {sfx_info['dropped_why']}")
+    print(f"sfx levels: by loudness vs the voice ({VSPEECH:.1f} LUFS speaking), bus lift {BUS_LIFT} dB, hook +{HOOK_BONUS} LU: "
+          + ', '.join(f'{t} {v}' for t, v in sorted(TARGET.items(), key=lambda kv: -kv[1])))
     print(f"riser ends at {hook_end:.3f}s | {sum(1 for c in clips if c['track'] == 'sfx')} sfx clips from {len(ev)} events | "
           f"{'SFX library ' + LIB.dir + ' (' + ', '.join(f'{c} {len(v)}' for c, v in sorted(LIB.cats.items())) + ')' if USE_LIB else 'synthesized SFX (no library)'}")
     print(f"mix preview: {meter.integrated_loudness(mix):.1f} LUFS, peak {tp:.1f} dBFS -> mix_preview.wav (listen to the hook)")

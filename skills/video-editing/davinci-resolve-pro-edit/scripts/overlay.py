@@ -96,7 +96,8 @@ def words_parts(b):
     lh = (lf.getbbox('A')[3] + 14 * U) if label else 0
     dsc = f.getbbox('gjpqy')[3] - f.getbbox('H')[3]           # descender depth below the baseline
     line_gap, line_h = dsc + 14 * U, 5 * U
-    cw = tw + 2 * WORDS_PADX * U
+    lw = (lf.getlength(label.upper()) + 0.14 * lf.size * (len(label) - 1)) if label else 0   # a long eyebrow widens the chip
+    cw = max(tw, lw) + 2 * WORDS_PADX * U
     ch = WORDS_PADY * U + lh + cap + line_gap + line_h + WORDS_PADY * U
     sp = WORDS_SHPAD * U; size = (int(cw + 2 * sp), int(ch + 2 * sp)); box = (sp, sp, sp + cw, sp + ch); r = int(WORDS_RADIUS * U)
     base = Image.new('RGBA', size, (0, 0, 0, 0))

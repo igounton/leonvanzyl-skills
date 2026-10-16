@@ -62,8 +62,8 @@ Leon called "energetic... things move... constantly showing examples and B-roll.
   channel's style, cued word by word. One continuous "world" may span two graphics back to back (an invisible cut);
   otherwise the recording or a zoom sits between graphics.
 - No music. No keyword pops. No splits. A whip (with its whoosh) only into or out of a full-visual resource, at
-  most one every couple of minutes. Sound design follows every visual event (section 6): highlight swishes on
-  marks, dings on boxes, a soft whoosh into each graphic.
+  most one every couple of minutes. Sound design follows the visual events (section 6): pops on every animation,
+  a soft whoosh into each graphic, a highlight swish or ding on a zoom's first mark only (accents are rare).
 - CTA cards whenever the speaker points to the community, a download or a link (section 3).
 
 ## 3. The beats
@@ -86,8 +86,9 @@ words: a move starts 0.25 s before the word that names its target; a mark lands 
   - `spot`: dims everything else (45%) to isolate a region on a busy screen.
   - `underline`: a sweeping accent bar under a phrase in a paragraph.
 - A beat never crosses a V1 title, generator or transition the editor added, and stays inside one scene.
-- SFX: nothing on the moves. A highlight swish when a band or underline sweeps, a soft ding when a box lands (not
-  when marks come within 0.7 s of each other), a `click` only where the recording shows a real press.
+- SFX: nothing on the moves. In the body only a zoom's FIRST mark sounds: a highlight swish when a band or underline
+  sweeps, a soft ding when a box lands (dings at least 15 s apart; section 6), a `click` only where the recording
+  shows a real press.
 
 **punch - static punch-in on camera items (hook and body).** Full-frame camera shots only.
 - A static zoom (1.10-1.20) on the V1 item itself, with the eyes on ~38% of the frame height and the face's x kept.
@@ -196,8 +197,22 @@ found synthesized SFX "bland and generic" (2026-10-13).
   when a box mark lands, a soft whoosh peaking on the cut into each full-visual graphic (not between two graphics of
   one continuous world), a whoosh on the whip midpoint, and a tasteful hit (sting) on hook_end. A highlight or ding
   never stacks within 0.15 s of another event. Nothing on zooms' camera moves, punch-ins, steps, pushes or glides.
-  Peaks vs the voice (library): click, pop -14 dB; chime -12; whoosh -12 (into graphics -17); highlight, ding -16;
-  sting -10; keys -20. `auto_sfx: false` in the plan turns the derived events off.
+  `auto_sfx: false` in the plan turns the derived events off.
+- **How often (the body).** Leon's pick in an A/B/C test (2026-10-16), after a viewer wrote "the new sound effects get
+  annoying fast - ding, scribble, ding, ding, ding". Texture sounds (pops, clicks, keys, soft whooshes) may be
+  frequent; accents (ding, chime, hit) are rare and mean something. `sfxlib.select` with LONGFORM_RULES: only the first
+  ding and the first scribble of a zoom or graphic; at most 5 pops per animation, 0.6 s apart (every animation keeps
+  its sounds: the variant that cut them to 2-3 "overcorrected"); dings / chimes at least 15 s apart; scribbles 4 s
+  apart; never two sounds within 0.35 s; at most 7 sounds in any 15 s. About 10.5 sounds a minute in the body
+  (Harness Engineering had 12.6, with 35 dings and 31 scribbles). The hook, CTA cards and keyword pops keep every
+  sound. Plan `sfx_rules` overrides any of it.
+- **How loud.** By LOUDNESS (the loudest 400 ms, K-weighted) against the voice's speaking loudness, never by peak: at
+  the same peak a bell or the marker scribble sounds 6-10 dB louder than a click, which had put chimes almost level
+  with the voice. Targets in LU under the voice as heard (`sfxlib.LONGFORM_TARGET`, plan `sfx_levels`): hit and chime
+  -10, ding and soft whoosh -11, pop and whoosh -12, scribble -14 (its hiss tamed, about -4 dB above 7 kHz), click and
+  keys -16; the hook +3 LU (`sfx_hook_bonus`; the music masks it). Resolve's main bus (compressor + makeup) lifts the
+  quiet layers, measured +4.5 dB on the effects against the voice, so the files are levelled 4.5 dB lower
+  (`sfx_bus_lift`; 0 for a project without a bus compressor).
 - **Riser:** the library's riser (cut right after its peak) or a 2.6 s synthesized swell, landing exactly on
   hook_end, -12 dB. The one sound allowed to rise
   into a cut.
@@ -213,7 +228,9 @@ found synthesized SFX "bland and generic" (2026-10-13).
   15 LU under the hook's voice (`under_voice_lu`), ducked ~5 dB more under speech, and it **fades out over 2-3 s
   starting at hook_end**. Nothing after that: long-form viewers tire of a bed under a tutorial.
 - **Final loudness** is set on delivery: the added layers are levelled against the voice, so normalising the whole
-  mix to -14 LUFS (YouTube) in Deliver keeps the balance. Say so in the report.
+  mix to -14 LUFS (YouTube) in Deliver keeps the balance. A compressor on the main bus does NOT: it lifts everything
+  under the voice (measured 3.5-7 dB for sounds 10-20 dB under), which `sfx_bus_lift` accounts for. Check the
+  project's bus, and say in the report what you assumed.
 
 ## 7. Captions, chapters, publishing
 - **Captions** are not burned in. `publish.py` writes `captions.srt` from the final word timings (fillers and noise

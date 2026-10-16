@@ -200,6 +200,28 @@ demo + browser sources, webcam PiP that MOVES between OBS scenes inside one file
   them; a sandbox / hosting / tooling vendor he doesn't mention stays generic. Captured pages (watch pages, READMEs)
   may carry sponsor lines in descriptions: crop or frame them out.
 
+**Scripted sponsor reads** (tripleten-midroll, 2026-10-15: a 94 s sponsor midroll read from a script, OBS screen + PiP)
+- **When the speaker is reading the script, drop the webcam.** Items where V1 shows the script itself (a Google Doc) were
+  recorded with Leon looking down at it, expecting full-screen text. He asked for g04 (planned as a split) and then g03
+  (fvp) to be full-frame `fv` with no PiP: "you should not show my webcam there at all... it was like that in the script
+  as well." Check the PiP on every item that shows the script / notes; plan those beats `fv`.
+- **Cover any frame that shows the script.** Look for the script doc in scenes (it was 9 s of the hook here).
+- **Fact-check the sponsor's claims too.** "Around two hundred practicing engineers" was on no TripleTen page; the graphic
+  showed the community without a number and the report flagged it. A line the script had but the recording lacked
+  (instructor employers) was true for one instructor only - show it on the one it's true for.
+- **A lower third the script asks for** works as a body keyword chip with a label; place it clear of the page's own
+  headline (the homepage headline sat bottom-left, so the chip moved right to xy 1450,905).
+- **Long chip eyebrows:** a label wider than the words overflowed the chip - overlay.py now sizes the chip to the wider
+  of the two.
+- **Split from a PiP:** compose.py's automatic scale (card width only) left a fill band at the bottom; the agent set the
+  scale in `split/<id>_geom.json` (2.2). geometry() should check bottom coverage too.
+- **music_gen.py can fail with "Insufficient KV cache"** when another app holds GPU memory (LM Studio / ComfyUI were open).
+  Check `nvidia-smi`, wait, retry - never touch the other processes.
+- **AppData is virtualised for the app** (`...\Packages\Claude_...\LocalCache\Local\...`): W lives there; M must stay
+  next to the sources so Resolve sees the files.
+- **A midroll's publishing copy** is a sponsor block for the host video (the program and audit links), not a title or
+  chapters; chapters on a midroll are section markers only.
+
 ## User feedback log
 Add the user's reactions to each edit here so the rules keep improving.
 - 2026-09-30, Sonnet 5.5 vs Opus 5.5 vs Fable 5.1 (test build "YTHD60 - Pro Edit TEST", hook + two body beats):
@@ -233,3 +255,18 @@ Add the user's reactions to each edit here so the rules keep improving.
   did with the same skill previously. The sound effects, the zooms, and the styles ... very cool." What made the
   difference, keep doing it: everything styled from the channel's own design system, B-roll wherever theory drags,
   real recorded SFX placed on every visual event, generated music chosen by the user, RVM for the head pop-out.
+- 2026-10-15, TripleTen sponsor midroll ("YTHD60 - Pro Edit v1", 1:34): the brief - "make this look way more polished"
+  after approving the clean cut ("you did a really good job"). Mid-run: "Please do not include music. No, wait. Ignore
+  that. Add music" (kept hook music); no webcam on the script-reading lines (g03, g04 -> fv). Built with 9 zooms, 8
+  graphics, 4 chips, 2 punch-ins, 59 SFX. Reaction to the finished timeline: not given yet.
+- 2026-10-16, Harness Engineering, after release: retention "higher than my previous videos by a long shot", but a
+  viewer wrote "the new sounds effects get annoying fast - ding, scribble, ding, ding, ding". Measured on the edit:
+  12.6 sounds a minute in the body with no music under it, 35 dings (every box mark) and 31 scribbles (every
+  highlight), 25 stretches with 4+ of them in 20 s, 97% landing on words. Peak-based levels put chimes ~2 LU and
+  dings / pops / scribbles ~8 LU under the voice after the bus (the main-bus compressor lifted the effects ~4.5 dB;
+  my earlier note that it kept the balance was wrong). An A/B/C on two 90 s stretches, with the bus emulated from the
+  upload (0.98 correlation): B (8.2 a minute, dings 11, pops 31, quieter) "overcorrected slightly - I would have
+  expected sound effects on some of those animations"; C (10.5 a minute, every animation keeps its pops, 20 dings
+  15 s apart, scribbles quieter and tamed) "way better ... not too distracting ... not too dense". C is the default
+  now (sfxlib LONGFORM_RULES / LONGFORM_TARGET). The lesson: trim the repeated accents, never the animation sounds;
+  and measure what the viewer hears (after the bus), not what the files say.

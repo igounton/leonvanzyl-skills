@@ -108,6 +108,9 @@ Read `references/lessons.md` before improvising. The biggest ones:
 - **Frame the zoom around the webcam:** the PiP is held still; keep targets out of `look.py`'s red box.
 - **Private details on screen:** blur them with a censor beat on the topmost track, scan the whole programme for the
   same words, and keep the words themselves out of the report and the publishing copy.
+- **Sound effects that wear thin:** level by loudness, not peak (at the same peak bells and scribbles sound 6-10 dB
+  louder than a click); only a zoom's first ding / scribble, accents 15 s apart, but every animation keeps its pops
+  (variant C, editing-spec section 6). Resolve's bus compressor lifts the effects ~4.5 dB (`sfx_bus_lift`).
 - **Resolve's API can't set clip volume or keyframes reliably:** levels are baked into the audio files, motion is
   rendered, punch-ins are static transforms.
 
