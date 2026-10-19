@@ -4,7 +4,7 @@ Skills by [Leon van Zyl](https://github.com/leonvanzyl) that take a web app from
 
 ## Install
 
-One command installs all four skills:
+One command installs every skill in this repo:
 
 ```bash
 npx skills add leonvanzyl/skills
@@ -47,3 +47,11 @@ Want a different auth provider? Ask your coding agent to swap it out in `referen
 Need a logo? The create-brand-kit skill runs a full brand-identity process from any starting point, even just a name. You get a logomark, wordmark, lockups, a design system, icons, social icons, favicons, app icons, and a generated guidelines page. Useful right after starting an app, before you show it to anyone.
 
 > Use the create-brand-kit skill for my app.
+
+## Build a game
+
+Have a game idea? The build-a-game skill takes it from a few sentences to a finished 3D browser game, live on the web. It's the process that built LAST CALL, a 25-minute cozy horror game made entirely with Claude Code. Every model, animation and effect is written in code with Three.js, and the voices, sound and music are made ahead of time with ElevenLabs (or for free, with sound made in code and subtitles instead of voices).
+
+There are 10 steps, and the agent checks in with you after each one. It locks the story, builds a tool that lets it see and measure every frame, and shows you three art styles to pick from. Then it casts the voices, makes a talking-character demo, and builds a playable five-minute slice with a small team of reviewer agents. You play the slice before it builds the rest, then it polishes the game and deploys it to the host you choose (Hostinger, Vercel, itch.io or any static host). You make the creative calls. Anything that costs money waits for your yes, and progress is saved in `docs/HANDOFF.md`, so a new session picks up where the last one stopped.
+
+> Use the build-a-game skill. I have a game idea...
